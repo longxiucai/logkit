@@ -1,0 +1,109 @@
+*.class
+
+meta
+ft
+ft_log
+
+# Mobile Tools for Java (J2ME)
+.mtj.tmp/
+.project
+.settings
+
+# Package Files #
+*.jar
+*.war
+*.ear
+*.iml
+
+# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+hs_err_pid*
+
+
+# golang ignore file 
+# Compiled Object files, Static and Dynamic libs (Shared Objects)
+*.o
+*.a
+*.so
+
+# Folders
+_obj
+_test
+bin/
+pkg/
+!vendor/github.com/pkg
+tests
+tests/meta_mock_csv
+.idea/
+.vscode/
+
+# Architecture specific extensions/prefixes
+*.[568vq]
+[568vq].out
+
+*.cgo1.go
+*.cgo2.c
+_cgo_defun.c
+_cgo_gotypes.go
+_cgo_export.*
+
+_testmain.go
+
+*.exe
+*.test
+*.prof
+
+meta/
+.DS_Store
+.cache
+.vscode
+logkit
+stats
+.logkitconfs/
+public/.project
+
+# logkitWeb ignore 
+# See https://help.github.com/ignore-files/ for more about ignoring files.
+
+# dependencies
+logkitweb/node_modules
+
+# testing
+logkitweb/coverage
+node_modules
+
+# production
+logkitweb/build
+
+# misc
+.DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+npm-debug.log*
+./logkitweb/yarn-debug.log*
+./logkitweb/yarn-error.log*
+logkit.log-*
+logkitweb/package-lock.json
+
+
+# virtualenv
+.venv
+venv/
+ENV/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+.Python
+
+# pyenv
+.python-version
+
+.metastore
+data/
+mytestservice/

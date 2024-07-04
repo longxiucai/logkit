@@ -1,0 +1,29 @@
+package os
+
+import (
+	"os"
+	"os/signal"
+	"syscall"
+
+	log "k8s.io/klog/v2"
+)
+
+// ----------------------------------------------------------
+
+func WaitForInterrupt(interrupt func()) {
+
+	// Set up channel on which to send signal notifications.
+	// We must use a buffered channel or risk missing the signal
+	// if we're not ready to receive when the signal is sent.
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGTERM, os.Interrupt, syscall.SIGQUIT)
+
+	// Block until a signal is received.
+	s := <-c
+
+	log.Info("Receiving signal:", s)
+
+	interrupt()
+}
+
+// ----------------------------------------------------------
