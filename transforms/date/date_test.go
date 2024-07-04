@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/qiniu/logkit/transforms"
-	. "github.com/qiniu/logkit/utils/models"
+	"github.com/longxiucai/logkit/transforms"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 func TestTransformer(t *testing.T) {

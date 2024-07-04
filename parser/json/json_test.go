@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/json-iterator/go"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/qiniu/logkit/conf"
-	"github.com/qiniu/logkit/parser"
-	"github.com/qiniu/logkit/utils"
-	. "github.com/qiniu/logkit/utils/models"
+	"github.com/longxiucai/logkit/conf"
+	"github.com/longxiucai/logkit/parser"
+	"github.com/longxiucai/logkit/utils"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 var (
@@ -232,7 +232,7 @@ var testmiddleline = `{
   "company": null
 }`
 
-//BenchmarkJsoninterParser-4                       	  300000	      5144 ns/op
+// BenchmarkJsoninterParser-4                       	  300000	      5144 ns/op
 func BenchmarkJsoninterParser(b *testing.B) {
 	jsonnumber := jsoniter.Config{
 		EscapeHTML: true,
@@ -246,7 +246,7 @@ func BenchmarkJsoninterParser(b *testing.B) {
 	}
 }
 
-//BenchmarkJsonParser-4                    	  200000	      7767 ns/op
+// BenchmarkJsonParser-4                    	  200000	      7767 ns/op
 func BenchmarkJsonParser(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		data := Data{}
@@ -258,7 +258,7 @@ func BenchmarkJsonParser(b *testing.B) {
 	}
 }
 
-//BenchmarkJsonMiddlelineParser-4                  	   30000	     58441 ns/op
+// BenchmarkJsonMiddlelineParser-4                  	   30000	     58441 ns/op
 func BenchmarkJsonMiddlelineParser(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		data := Data{}
@@ -270,7 +270,7 @@ func BenchmarkJsonMiddlelineParser(b *testing.B) {
 	}
 }
 
-//BenchmarkJsoniterMiddlelineWithDecoderParser-4   	   30000	     41496 ns/op
+// BenchmarkJsoniterMiddlelineWithDecoderParser-4   	   30000	     41496 ns/op
 func BenchmarkJsoniterMiddlelineWithDecoderParser(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		data := Data{}
@@ -282,7 +282,7 @@ func BenchmarkJsoniterMiddlelineWithDecoderParser(b *testing.B) {
 	}
 }
 
-//BenchmarkMiddlelineWithConfigParser-4            	   50000	     35298 ns/op
+// BenchmarkMiddlelineWithConfigParser-4            	   50000	     35298 ns/op
 func BenchmarkMiddlelineWithConfigParser(b *testing.B) {
 	jsonnumber := jsoniter.Config{
 		EscapeHTML: true,

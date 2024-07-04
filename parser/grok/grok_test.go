@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/qiniu/logkit/utils"
-	. "github.com/qiniu/logkit/utils/models"
+	"github.com/longxiucai/logkit/utils"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 var (

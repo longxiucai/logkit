@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	. "github.com/qiniu/logkit/utils/models"
+	jsoniter "github.com/json-iterator/go"
+	. "github.com/longxiucai/logkit/utils/models"
 
-	"github.com/json-iterator/go"
 	"github.com/stretchr/testify/assert"
 )
 

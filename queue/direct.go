@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sync"
 
-	. "github.com/qiniu/logkit/utils/models"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 const (

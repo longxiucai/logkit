@@ -3,7 +3,7 @@ package mutate
 import (
 	"testing"
 
-	. "github.com/qiniu/logkit/utils/models"
+	. "github.com/longxiucai/logkit/utils/models"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,8 +29,8 @@ func TestDeepconvertkey(t *testing.T) {
 
 var got []Data
 
-//old(没有cache):500000	      2846 ns/op	    2536 B/op	      33 allocs/op
-//new(cache): 500000	      2249 ns/op	    2392 B/op	      17 allocs/op
+// old(没有cache):500000	      2846 ns/op	    2536 B/op	      33 allocs/op
+// new(cache): 500000	      2249 ns/op	    2392 B/op	      17 allocs/op
 func BenchmarkCache(b *testing.B) {
 	pandoraConvert := &PandoraKeyConvert{cache: make(map[string]KeyInfo)}
 	b.ReportAllocs()

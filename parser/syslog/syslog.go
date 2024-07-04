@@ -11,9 +11,9 @@ import (
 	"github.com/jeromer/syslogparser/rfc3164"
 	"github.com/jeromer/syslogparser/rfc5424"
 
-	"github.com/qiniu/logkit/conf"
-	"github.com/qiniu/logkit/parser"
-	. "github.com/qiniu/logkit/utils/models"
+	"github.com/longxiucai/logkit/conf"
+	"github.com/longxiucai/logkit/parser"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 const (

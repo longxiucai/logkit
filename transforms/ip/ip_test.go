@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/qiniu/logkit/transforms"
-	. "github.com/qiniu/logkit/utils/models"
+	"github.com/longxiucai/logkit/transforms"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 func TestTransformer(t *testing.T) {
@@ -276,8 +276,8 @@ func TestTransformer(t *testing.T) {
 
 var dttest []Data
 
-//old: 1000000	      1152 ns/op	     432 B/op	      16 allocs/op
-//new: 2000000	       621 ns/op	     232 B/op	       7 allocs/op
+// old: 1000000	      1152 ns/op	     432 B/op	      16 allocs/op
+// new: 2000000	       621 ns/op	     232 B/op	       7 allocs/op
 func BenchmarkIpTrans(b *testing.B) {
 	b.ReportAllocs()
 	ipt := &Transformer{

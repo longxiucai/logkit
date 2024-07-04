@@ -23,6 +23,7 @@ const (
 // ScrollService iterates over pages of search results from Elasticsearch.
 type ScrollService struct {
 	client            *Client
+	retrier           Retrier
 	indices           []string
 	types             []string
 	keepAlive         string
@@ -35,6 +36,7 @@ type ScrollService struct {
 	ignoreUnavailable *bool
 	allowNoIndices    *bool
 	expandWildcards   string
+	filterPath        []string
 
 	mu       sync.RWMutex
 	scrollId string
@@ -48,6 +50,13 @@ func NewScrollService(client *Client) *ScrollService {
 		keepAlive: DefaultScrollKeepAlive,
 	}
 	return builder
+}
+
+// Retrier allows to set specific retry logic for this ScrollService.
+// If not specified, it will use the client's default retrier.
+func (s *ScrollService) Retrier(retrier Retrier) *ScrollService {
+	s.retrier = retrier
+	return s
 }
 
 // Index sets the name of one or more indices to iterate over.
@@ -92,7 +101,7 @@ func (s *ScrollService) Size(size int) *ScrollService {
 // Body sets the raw body to send to Elasticsearch. This can be e.g. a string,
 // a map[string]interface{} or anything that can be serialized into JSON.
 // Notice that setting the body disables the use of SearchSource and many
-// other properties of the ScanService.
+// other properties of the SearchService.
 func (s *ScrollService) Body(body interface{}) *ScrollService {
 	s.body = body
 	return s
@@ -219,6 +228,14 @@ func (s *ScrollService) ExpandWildcards(expandWildcards string) *ScrollService {
 	return s
 }
 
+// FilterPath allows reducing the response, a mechanism known as
+// response filtering and described here:
+// https://www.elastic.co/guide/en/elasticsearch/reference/5.6/common-options.html#common-options-response-filtering.
+func (s *ScrollService) FilterPath(filterPath ...string) *ScrollService {
+	s.filterPath = append(s.filterPath, filterPath...)
+	return s
+}
+
 // ScrollId specifies the identifier of a scroll in action.
 func (s *ScrollService) ScrollId(scrollId string) *ScrollService {
 	s.mu.Lock()
@@ -258,7 +275,13 @@ func (s *ScrollService) Clear(ctx context.Context) error {
 		ScrollId: []string{scrollId},
 	}
 
-	_, err := s.client.PerformRequest(ctx, "DELETE", path, params, body)
+	_, err := s.client.PerformRequestWithOptions(ctx, PerformRequestOptions{
+		Method:  "DELETE",
+		Path:    path,
+		Params:  params,
+		Body:    body,
+		Retrier: s.retrier,
+	})
 	if err != nil {
 		return err
 	}
@@ -283,7 +306,13 @@ func (s *ScrollService) first(ctx context.Context) (*SearchResult, error) {
 	}
 
 	// Get HTTP response
-	res, err := s.client.PerformRequest(ctx, "POST", path, params, body)
+	res, err := s.client.PerformRequestWithOptions(ctx, PerformRequestOptions{
+		Method:  "POST",
+		Path:    path,
+		Params:  params,
+		Body:    body,
+		Retrier: s.retrier,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +326,7 @@ func (s *ScrollService) first(ctx context.Context) (*SearchResult, error) {
 	s.scrollId = ret.ScrollId
 	s.mu.Unlock()
 	if ret.Hits == nil || len(ret.Hits.Hits) == 0 {
-		return nil, io.EOF
+		return ret, io.EOF
 	}
 	return ret, nil
 }
@@ -353,6 +382,11 @@ func (s *ScrollService) buildFirstURL() (string, url.Values, error) {
 	if s.ignoreUnavailable != nil {
 		params.Set("ignore_unavailable", fmt.Sprintf("%v", *s.ignoreUnavailable))
 	}
+	if len(s.filterPath) > 0 {
+		// Always add "hits._scroll_id", otherwise we cannot scroll
+		s.filterPath = append(s.filterPath, "_scroll_id")
+		params.Set("filter_path", strings.Join(s.filterPath, ","))
+	}
 
 	return path, params, nil
 }
@@ -397,7 +431,13 @@ func (s *ScrollService) next(ctx context.Context) (*SearchResult, error) {
 	}
 
 	// Get HTTP response
-	res, err := s.client.PerformRequest(ctx, "POST", path, params, body)
+	res, err := s.client.PerformRequestWithOptions(ctx, PerformRequestOptions{
+		Method:  "POST",
+		Path:    path,
+		Params:  params,
+		Body:    body,
+		Retrier: s.retrier,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -411,7 +451,7 @@ func (s *ScrollService) next(ctx context.Context) (*SearchResult, error) {
 	s.scrollId = ret.ScrollId
 	s.mu.Unlock()
 	if ret.Hits == nil || len(ret.Hits.Hits) == 0 {
-		return nil, io.EOF
+		return ret, io.EOF
 	}
 	return ret, nil
 }

@@ -4,6 +4,8 @@
 
 package elastic
 
+//go:generate easyjson bulk_delete_request.go
+
 import (
 	"encoding/json"
 	"fmt"
@@ -14,24 +16,54 @@ import (
 
 // BulkDeleteRequest is a request to remove a document from Elasticsearch.
 //
-// See https://www.elastic.co/guide/en/elasticsearch/reference/6.0/docs-bulk.html
+// See https://www.elastic.co/guide/en/elasticsearch/reference/6.8/docs-bulk.html
 // for details.
 type BulkDeleteRequest struct {
 	BulkableRequest
-	index       string
-	typ         string
-	id          string
-	parent      string
-	routing     string
-	version     int64  // default is MATCH_ANY
-	versionType string // default is "internal"
+	index         string
+	typ           string
+	id            string
+	parent        string
+	routing       string
+	version       int64  // default is MATCH_ANY
+	versionType   string // default is "internal"
+	ifSeqNo       *int64
+	ifPrimaryTerm *int64
 
 	source []string
+
+	useEasyJSON bool
+}
+
+//easyjson:json
+type bulkDeleteRequestCommand map[string]bulkDeleteRequestCommandOp
+
+//easyjson:json
+type bulkDeleteRequestCommandOp struct {
+	Index         string `json:"_index,omitempty"`
+	Type          string `json:"_type,omitempty"`
+	Id            string `json:"_id,omitempty"`
+	Parent        string `json:"parent,omitempty"`
+	Routing       string `json:"routing,omitempty"`
+	Version       int64  `json:"version,omitempty"`
+	VersionType   string `json:"version_type,omitempty"`
+	IfSeqNo       *int64 `json:"if_seq_no,omitempty"`
+	IfPrimaryTerm *int64 `json:"if_primary_term,omitempty"`
 }
 
 // NewBulkDeleteRequest returns a new BulkDeleteRequest.
 func NewBulkDeleteRequest() *BulkDeleteRequest {
 	return &BulkDeleteRequest{}
+}
+
+// UseEasyJSON is an experimental setting that enables serialization
+// with github.com/mailru/easyjson, which should in faster serialization
+// time and less allocations, but removed compatibility with encoding/json,
+// usage of unsafe etc. See https://github.com/mailru/easyjson#issues-notes-and-limitations
+// for details. This setting is disabled by default.
+func (r *BulkDeleteRequest) UseEasyJSON(enable bool) *BulkDeleteRequest {
+	r.useEasyJSON = enable
+	return r
 }
 
 // Index specifies the Elasticsearch index to use for this delete request.
@@ -88,6 +120,20 @@ func (r *BulkDeleteRequest) VersionType(versionType string) *BulkDeleteRequest {
 	return r
 }
 
+// IfSeqNo indicates to only perform the delete operation if the last
+// operation that has changed the document has the specified sequence number.
+func (r *BulkDeleteRequest) IfSeqNo(ifSeqNo int64) *BulkDeleteRequest {
+	r.ifSeqNo = &ifSeqNo
+	return r
+}
+
+// IfPrimaryTerm indicates to only perform the delete operation if the
+// last operation that has changed the document has the specified primary term.
+func (r *BulkDeleteRequest) IfPrimaryTerm(ifPrimaryTerm int64) *BulkDeleteRequest {
+	r.ifPrimaryTerm = &ifPrimaryTerm
+	return r
+}
+
 // String returns the on-wire representation of the delete request,
 // concatenated as a single string.
 func (r *BulkDeleteRequest) String() string {
@@ -100,45 +146,40 @@ func (r *BulkDeleteRequest) String() string {
 
 // Source returns the on-wire representation of the delete request,
 // split into an action-and-meta-data line and an (optional) source line.
-// See https://www.elastic.co/guide/en/elasticsearch/reference/6.0/docs-bulk.html
+// See https://www.elastic.co/guide/en/elasticsearch/reference/6.8/docs-bulk.html
 // for details.
 func (r *BulkDeleteRequest) Source() ([]string, error) {
 	if r.source != nil {
 		return r.source, nil
 	}
-	lines := make([]string, 1)
+	command := bulkDeleteRequestCommand{
+		"delete": bulkDeleteRequestCommandOp{
+			Index:         r.index,
+			Type:          r.typ,
+			Id:            r.id,
+			Routing:       r.routing,
+			Parent:        r.parent,
+			Version:       r.version,
+			VersionType:   r.versionType,
+			IfSeqNo:       r.ifSeqNo,
+			IfPrimaryTerm: r.ifPrimaryTerm,
+		},
+	}
 
-	source := make(map[string]interface{})
-	deleteCommand := make(map[string]interface{})
-	if r.index != "" {
-		deleteCommand["_index"] = r.index
+	var err error
+	var body []byte
+	if r.useEasyJSON {
+		// easyjson
+		body, err = command.MarshalJSON()
+	} else {
+		// encoding/json
+		body, err = json.Marshal(command)
 	}
-	if r.typ != "" {
-		deleteCommand["_type"] = r.typ
-	}
-	if r.id != "" {
-		deleteCommand["_id"] = r.id
-	}
-	if r.parent != "" {
-		deleteCommand["_parent"] = r.parent
-	}
-	if r.routing != "" {
-		deleteCommand["_routing"] = r.routing
-	}
-	if r.version > 0 {
-		deleteCommand["_version"] = r.version
-	}
-	if r.versionType != "" {
-		deleteCommand["_version_type"] = r.versionType
-	}
-	source["delete"] = deleteCommand
-
-	body, err := json.Marshal(source)
 	if err != nil {
 		return nil, err
 	}
 
-	lines[0] = string(body)
+	lines := []string{string(body)}
 	r.source = lines
 
 	return lines, nil

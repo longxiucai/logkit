@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	. "github.com/qiniu/logkit/utils/models"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 func TestDirectQueue(t *testing.T) {

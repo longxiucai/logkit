@@ -3,7 +3,7 @@ package reader
 import (
 	"strings"
 
-	. "github.com/qiniu/logkit/utils/models"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 // Constants for cloudtrail

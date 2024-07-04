@@ -1,69 +1,90 @@
+//go:generate ../../../tools/readme_config_includer/generator
 package memcached
 
 import (
 	"bufio"
 	"bytes"
+	"crypto/tls"
+	_ "embed"
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
 	"time"
 
+	"golang.org/x/net/proxy"
+
 	"github.com/influxdata/telegraf"
+	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 // Memcached is a memcached plugin
 type Memcached struct {
-	Servers     []string
-	UnixSockets []string
+	Servers     []string `toml:"servers"`
+	UnixSockets []string `toml:"unix_sockets"`
+	EnableTLS   bool     `toml:"enable_tls"`
+	tlsint.ClientConfig
 }
-
-var sampleConfig = `
-  ## An array of address to gather stats about. Specify an ip on hostname
-  ## with optional port. ie localhost, 10.0.0.1:11211, etc.
-  servers = ["localhost:11211"]
-  # unix_sockets = ["/var/run/memcached.sock"]
-`
 
 var defaultTimeout = 5 * time.Second
 
 // The list of metrics that should be sent
 var sendMetrics = []string{
-	"get_hits",
-	"get_misses",
-	"evictions",
-	"limit_maxbytes",
+	"accepting_conns",
+	"auth_cmds",
+	"auth_errors",
 	"bytes",
-	"uptime",
-	"curr_items",
-	"total_items",
-	"curr_connections",
-	"total_connections",
-	"connection_structures",
-	"cmd_get",
-	"cmd_set",
-	"delete_hits",
-	"delete_misses",
-	"incr_hits",
-	"incr_misses",
-	"decr_hits",
-	"decr_misses",
-	"cas_hits",
-	"cas_misses",
 	"bytes_read",
 	"bytes_written",
-	"threads",
+	"cas_badval",
+	"cas_hits",
+	"cas_misses",
+	"cmd_flush",
+	"cmd_get",
+	"cmd_set",
+	"cmd_touch",
 	"conn_yields",
+	"connection_structures",
+	"curr_connections",
+	"curr_items",
+	"decr_hits",
+	"decr_misses",
+	"delete_hits",
+	"delete_misses",
+	"evicted_active",
+	"evicted_unfetched",
+	"evictions",
+	"expired_unfetched",
+	"get_expired",
+	"get_flushed",
+	"get_hits",
+	"get_misses",
+	"hash_bytes",
+	"hash_is_expanding",
+	"hash_power_level",
+	"incr_hits",
+	"incr_misses",
+	"limit_maxbytes",
+	"listen_disabled_num",
+	"max_connections",
+	"reclaimed",
+	"rejected_connections",
+	"store_no_memory",
+	"store_too_large",
+	"threads",
+	"total_connections",
+	"total_items",
+	"touch_hits",
+	"touch_misses",
+	"uptime",
 }
 
-// SampleConfig returns sample configuration message
-func (m *Memcached) SampleConfig() string {
+func (*Memcached) SampleConfig() string {
 	return sampleConfig
-}
-
-// Description returns description of Memcached plugin
-func (m *Memcached) Description() string {
-	return "Read metrics from one or many memcached servers"
 }
 
 // Gather reads stats from all configured servers accumulates stats
@@ -90,8 +111,23 @@ func (m *Memcached) gatherServer(
 ) error {
 	var conn net.Conn
 	var err error
+	var dialer proxy.Dialer
+
+	dialer = &net.Dialer{Timeout: defaultTimeout}
+	if m.EnableTLS {
+		tlsCfg, err := m.ClientConfig.TLSConfig()
+		if err != nil {
+			return err
+		}
+
+		dialer = &tls.Dialer{
+			NetDialer: dialer.(*net.Dialer),
+			Config:    tlsCfg,
+		}
+	}
+
 	if unix {
-		conn, err = net.DialTimeout("unix", address, defaultTimeout)
+		conn, err = dialer.Dial("unix", address)
 		if err != nil {
 			return err
 		}
@@ -102,7 +138,7 @@ func (m *Memcached) gatherServer(
 			address = address + ":11211"
 		}
 
-		conn, err = net.DialTimeout("tcp", address, defaultTimeout)
+		conn, err = dialer.Dial("tcp", address)
 		if err != nil {
 			return err
 		}
@@ -110,11 +146,13 @@ func (m *Memcached) gatherServer(
 	}
 
 	if conn == nil {
-		return fmt.Errorf("Failed to create net connection")
+		return errors.New("failed to create net connection")
 	}
 
 	// Extend connection
-	conn.SetDeadline(time.Now().Add(defaultTimeout))
+	if err := conn.SetDeadline(time.Now().Add(defaultTimeout)); err != nil {
+		return err
+	}
 
 	// Read and write buffer
 	rw := bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))

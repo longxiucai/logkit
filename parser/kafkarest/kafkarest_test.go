@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/qiniu/logkit/conf"
-	"github.com/qiniu/logkit/parser"
+	"github.com/longxiucai/logkit/conf"
+	"github.com/longxiucai/logkit/parser"
 )
 
 func TestKafaRestLogParser(t *testing.T) {

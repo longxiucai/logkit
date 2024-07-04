@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/qiniu/logkit/metric"
-	. "github.com/qiniu/logkit/utils/models"
+	"github.com/longxiucai/logkit/metric"
+	. "github.com/longxiucai/logkit/utils/models"
 	log "k8s.io/klog/v2"
 
 	"github.com/shirou/gopsutil/process"

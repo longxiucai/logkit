@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/qiniu/logkit/transforms"
-	. "github.com/qiniu/logkit/utils/models"
+	"github.com/longxiucai/logkit/transforms"
+	. "github.com/longxiucai/logkit/utils/models"
 	log "k8s.io/klog/v2"
 )
 

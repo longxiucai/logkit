@@ -4,9 +4,12 @@
 
 package elastic
 
+import "fmt"
+
 // TermsAggregation is a multi-bucket value source based aggregation
 // where buckets are dynamically built - one per unique value.
-// See: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search-aggregations-bucket-terms-aggregation.html
+//
+// See: https://www.elasticsearch.org/guide/en/elasticsearch/reference/6.8/search-aggregations-bucket-terms-aggregation.html
 type TermsAggregation struct {
 	field           string
 	script          *Script
@@ -29,7 +32,7 @@ type TermsAggregation struct {
 
 func NewTermsAggregation() *TermsAggregation {
 	return &TermsAggregation{
-		subAggregations: make(map[string]Aggregation, 0),
+		subAggregations: make(map[string]Aggregation),
 	}
 }
 
@@ -133,6 +136,11 @@ func (a *TermsAggregation) NumPartitions(n int) *TermsAggregation {
 	return a
 }
 
+func (a *TermsAggregation) IncludeExclude(includeExclude *TermsAggregationIncludeExclude) *TermsAggregation {
+	a.includeExclude = includeExclude
+	return a
+}
+
 // ValueType can be string, long, or double.
 func (a *TermsAggregation) ValueType(valueType string) *TermsAggregation {
 	a.valueType = valueType
@@ -158,18 +166,35 @@ func (a *TermsAggregation) OrderByCountDesc() *TermsAggregation {
 	return a.OrderByCount(false)
 }
 
+// Deprecated: Use OrderByKey instead.
 func (a *TermsAggregation) OrderByTerm(asc bool) *TermsAggregation {
 	// "order" : { "_term" : "asc" }
 	a.order = append(a.order, TermsOrder{Field: "_term", Ascending: asc})
 	return a
 }
 
+// Deprecated: Use OrderByKeyAsc instead.
 func (a *TermsAggregation) OrderByTermAsc() *TermsAggregation {
 	return a.OrderByTerm(true)
 }
 
+// Deprecated: Use OrderByKeyDesc instead.
 func (a *TermsAggregation) OrderByTermDesc() *TermsAggregation {
 	return a.OrderByTerm(false)
+}
+
+func (a *TermsAggregation) OrderByKey(asc bool) *TermsAggregation {
+	// "order" : { "_term" : "asc" }
+	a.order = append(a.order, TermsOrder{Field: "_key", Ascending: asc})
+	return a
+}
+
+func (a *TermsAggregation) OrderByKeyAsc() *TermsAggregation {
+	return a.OrderByKey(true)
+}
+
+func (a *TermsAggregation) OrderByKeyDesc() *TermsAggregation {
+	return a.OrderByKey(false)
 }
 
 // OrderByAggregation creates a bucket ordering strategy which sorts buckets
@@ -294,24 +319,11 @@ func (a *TermsAggregation) Source() (interface{}, error) {
 		}
 		opts["order"] = orderSlice
 	}
+
 	// Include/Exclude
 	if ie := a.includeExclude; ie != nil {
-		// Include
-		if ie.Include != "" {
-			opts["include"] = ie.Include
-		} else if len(ie.IncludeValues) > 0 {
-			opts["include"] = ie.IncludeValues
-		} else if ie.NumPartitions > 0 {
-			inc := make(map[string]interface{})
-			inc["partition"] = ie.Partition
-			inc["num_partitions"] = ie.NumPartitions
-			opts["include"] = inc
-		}
-		// Exclude
-		if ie.Exclude != "" {
-			opts["exclude"] = ie.Exclude
-		} else if len(ie.ExcludeValues) > 0 {
-			opts["exclude"] = ie.ExcludeValues
+		if err := ie.MergeInto(opts); err != nil {
+			return nil, err
 		}
 	}
 
@@ -348,6 +360,48 @@ type TermsAggregationIncludeExclude struct {
 	ExcludeValues []interface{}
 	Partition     int
 	NumPartitions int
+}
+
+// Source returns a JSON serializable struct.
+func (ie *TermsAggregationIncludeExclude) Source() (interface{}, error) {
+	source := make(map[string]interface{})
+
+	// Include
+	if ie.Include != "" {
+		source["include"] = ie.Include
+	} else if len(ie.IncludeValues) > 0 {
+		source["include"] = ie.IncludeValues
+	} else if ie.NumPartitions > 0 {
+		inc := make(map[string]interface{})
+		inc["partition"] = ie.Partition
+		inc["num_partitions"] = ie.NumPartitions
+		source["include"] = inc
+	}
+
+	// Exclude
+	if ie.Exclude != "" {
+		source["exclude"] = ie.Exclude
+	} else if len(ie.ExcludeValues) > 0 {
+		source["exclude"] = ie.ExcludeValues
+	}
+
+	return source, nil
+}
+
+// MergeInto merges the values of the include/exclude options into source.
+func (ie *TermsAggregationIncludeExclude) MergeInto(source map[string]interface{}) error {
+	values, err := ie.Source()
+	if err != nil {
+		return err
+	}
+	mv, ok := values.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("IncludeExclude: expected a map[string]interface{}, got %T", values)
+	}
+	for k, v := range mv {
+		source[k] = v
+	}
+	return nil
 }
 
 // TermsOrder specifies a single order field for a terms aggregation.

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/qiniu/logkit/transforms"
-	. "github.com/qiniu/logkit/utils/models"
+	"github.com/longxiucai/logkit/transforms"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 const Name = "IP"
@@ -181,7 +181,7 @@ func (t *Transformer) Transform(datas []Data) ([]Data, error) {
 	return datas, fmtErr
 }
 
-//通过层级key设置value值, 如果keys不存在则不加前缀，否则加前缀
+// 通过层级key设置value值, 如果keys不存在则不加前缀，否则加前缀
 func (t *Transformer) SetMapValue(m map[string]interface{}, val interface{}, keys ...string) error {
 	if len(keys) == 0 {
 		return nil

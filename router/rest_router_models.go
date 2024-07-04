@@ -1,7 +1,7 @@
 package router
 
 import (
-	. "github.com/qiniu/logkit/utils/models"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 func GetRouterOption() []Option {

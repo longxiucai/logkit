@@ -38,6 +38,7 @@ package echo
 
 import (
 	"bytes"
+	stdContext "context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -45,6 +46,7 @@ import (
 	stdLog "log"
 	"net"
 	"net/http"
+	"net/url"
 	"path"
 	"path/filepath"
 	"reflect"
@@ -60,7 +62,7 @@ import (
 type (
 	// Echo is the top-level framework instance.
 	Echo struct {
-		stdLogger        *stdLog.Logger
+		StdLogger        *stdLog.Logger
 		colorer          *color.Color
 		premiddleware    []MiddlewareFunc
 		middleware       []MiddlewareFunc
@@ -76,12 +78,12 @@ type (
 		DisableHTTP2     bool
 		Debug            bool
 		HideBanner       bool
+		HidePort         bool
 		HTTPErrorHandler HTTPErrorHandler
 		Binder           Binder
 		Validator        Validator
 		Renderer         Renderer
-		// Mutex            sync.RWMutex
-		Logger Logger
+		Logger           Logger
 	}
 
 	// Route contains a handler and information for matching against requests.
@@ -93,14 +95,15 @@ type (
 
 	// HTTPError represents an error that occurred while handling a request.
 	HTTPError struct {
-		Code    int
-		Message interface{}
+		Code     int
+		Message  interface{}
+		Internal error // Stores the error returned by an external dependency
 	}
 
 	// MiddlewareFunc defines a function to process middleware.
 	MiddlewareFunc func(HandlerFunc) HandlerFunc
 
-	// HandlerFunc defines a function to server HTTP requests.
+	// HandlerFunc defines a function to serve HTTP requests.
 	HandlerFunc func(Context) error
 
 	// HTTPErrorHandler is a centralized HTTP error handler.
@@ -126,16 +129,18 @@ type (
 )
 
 // HTTP methods
+// NOTE: Deprecated, please use the stdlib constants directly instead.
 const (
-	CONNECT = "CONNECT"
-	DELETE  = "DELETE"
-	GET     = "GET"
-	HEAD    = "HEAD"
-	OPTIONS = "OPTIONS"
-	PATCH   = "PATCH"
-	POST    = "POST"
-	PUT     = "PUT"
-	TRACE   = "TRACE"
+	CONNECT = http.MethodConnect
+	DELETE  = http.MethodDelete
+	GET     = http.MethodGet
+	HEAD    = http.MethodHead
+	OPTIONS = http.MethodOptions
+	PATCH   = http.MethodPatch
+	POST    = http.MethodPost
+	// PROPFIND = "PROPFIND"
+	PUT   = http.MethodPut
+	TRACE = http.MethodTrace
 )
 
 // MIME types
@@ -161,6 +166,8 @@ const (
 
 const (
 	charsetUTF8 = "charset=UTF-8"
+	// PROPFIND Method can be used on collection and property resources.
+	PROPFIND = "PROPFIND"
 )
 
 // Headers
@@ -189,6 +196,7 @@ const (
 	HeaderXHTTPMethodOverride = "X-HTTP-Method-Override"
 	HeaderXRealIP             = "X-Real-IP"
 	HeaderXRequestID          = "X-Request-ID"
+	HeaderXRequestedWith      = "X-Requested-With"
 	HeaderServer              = "Server"
 	HeaderOrigin              = "Origin"
 
@@ -212,7 +220,8 @@ const (
 )
 
 const (
-	version = "3.2.1"
+	// Version of Echo
+	Version = "3.3.10-dev"
 	website = "https://echo.labstack.com"
 	// http://patorjk.com/software/taag/#p=display&f=Small%20Slant&t=Echo
 	banner = `
@@ -229,15 +238,16 @@ ____________________________________O/_______
 
 var (
 	methods = [...]string{
-		CONNECT,
-		DELETE,
-		GET,
-		HEAD,
-		OPTIONS,
-		PATCH,
-		POST,
-		PUT,
-		TRACE,
+		http.MethodConnect,
+		http.MethodDelete,
+		http.MethodGet,
+		http.MethodHead,
+		http.MethodOptions,
+		http.MethodPatch,
+		http.MethodPost,
+		PROPFIND,
+		http.MethodPut,
+		http.MethodTrace,
 	}
 )
 
@@ -249,10 +259,16 @@ var (
 	ErrForbidden                   = NewHTTPError(http.StatusForbidden)
 	ErrMethodNotAllowed            = NewHTTPError(http.StatusMethodNotAllowed)
 	ErrStatusRequestEntityTooLarge = NewHTTPError(http.StatusRequestEntityTooLarge)
-	ErrValidatorNotRegistered      = errors.New("Validator not registered")
-	ErrRendererNotRegistered       = errors.New("Renderer not registered")
-	ErrInvalidRedirectCode         = errors.New("Invalid redirect status code")
-	ErrCookieNotFound              = errors.New("Cookie not found")
+	ErrTooManyRequests             = NewHTTPError(http.StatusTooManyRequests)
+	ErrBadRequest                  = NewHTTPError(http.StatusBadRequest)
+	ErrBadGateway                  = NewHTTPError(http.StatusBadGateway)
+	ErrInternalServerError         = NewHTTPError(http.StatusInternalServerError)
+	ErrRequestTimeout              = NewHTTPError(http.StatusRequestTimeout)
+	ErrServiceUnavailable          = NewHTTPError(http.StatusServiceUnavailable)
+	ErrValidatorNotRegistered      = errors.New("validator not registered")
+	ErrRendererNotRegistered       = errors.New("renderer not registered")
+	ErrInvalidRedirectCode         = errors.New("invalid redirect status code")
+	ErrCookieNotFound              = errors.New("cookie not found")
 )
 
 // Error handlers
@@ -282,8 +298,8 @@ func New() (e *Echo) {
 	e.TLSServer.Handler = e
 	e.HTTPErrorHandler = e.DefaultHTTPErrorHandler
 	e.Binder = &DefaultBinder{}
-	e.Logger.SetLevel(log.OFF)
-	e.stdLogger = stdLog.New(e.Logger.Output(), e.Logger.Prefix()+": ", 0)
+	e.Logger.SetLevel(log.ERROR)
+	e.StdLogger = stdLog.New(e.Logger.Output(), e.Logger.Prefix()+": ", 0)
 	e.pool.New = func() interface{} {
 		return e.NewContext(nil, nil)
 	}
@@ -295,7 +311,7 @@ func New() (e *Echo) {
 func (e *Echo) NewContext(r *http.Request, w http.ResponseWriter) Context {
 	return &context{
 		request:  r,
-		response: &Response{echo: e, Writer: w},
+		response: NewResponse(w, e),
 		store:    make(Map),
 		echo:     e,
 		pvalues:  make([]string, *e.maxParam),
@@ -319,6 +335,9 @@ func (e *Echo) DefaultHTTPErrorHandler(err error, c Context) {
 	if he, ok := err.(*HTTPError); ok {
 		code = he.Code
 		msg = he.Message
+		if he.Internal != nil {
+			err = fmt.Errorf("%v, %v", err, he.Internal)
+		}
 	} else if e.Debug {
 		msg = err.Error()
 	} else {
@@ -328,19 +347,17 @@ func (e *Echo) DefaultHTTPErrorHandler(err error, c Context) {
 		msg = Map{"message": msg}
 	}
 
+	// Send response
 	if !c.Response().Committed {
-		if c.Request().Method == HEAD { // Issue #608
-			if err := c.NoContent(code); err != nil {
-				goto ERROR
-			}
+		if c.Request().Method == http.MethodHead { // Issue #608
+			err = c.NoContent(code)
 		} else {
-			if err := c.JSON(code, msg); err != nil {
-				goto ERROR
-			}
+			err = c.JSON(code, msg)
+		}
+		if err != nil {
+			e.Logger.Error(err)
 		}
 	}
-ERROR:
-	e.Logger.Error(err)
 }
 
 // Pre adds middleware to the chain which is run before router.
@@ -356,63 +373,63 @@ func (e *Echo) Use(middleware ...MiddlewareFunc) {
 // CONNECT registers a new CONNECT route for a path with matching handler in the
 // router with optional route-level middleware.
 func (e *Echo) CONNECT(path string, h HandlerFunc, m ...MiddlewareFunc) *Route {
-	return e.Add(CONNECT, path, h, m...)
+	return e.Add(http.MethodConnect, path, h, m...)
 }
 
 // DELETE registers a new DELETE route for a path with matching handler in the router
 // with optional route-level middleware.
 func (e *Echo) DELETE(path string, h HandlerFunc, m ...MiddlewareFunc) *Route {
-	return e.Add(DELETE, path, h, m...)
+	return e.Add(http.MethodDelete, path, h, m...)
 }
 
 // GET registers a new GET route for a path with matching handler in the router
 // with optional route-level middleware.
 func (e *Echo) GET(path string, h HandlerFunc, m ...MiddlewareFunc) *Route {
-	return e.Add(GET, path, h, m...)
+	return e.Add(http.MethodGet, path, h, m...)
 }
 
 // HEAD registers a new HEAD route for a path with matching handler in the
 // router with optional route-level middleware.
 func (e *Echo) HEAD(path string, h HandlerFunc, m ...MiddlewareFunc) *Route {
-	return e.Add(HEAD, path, h, m...)
+	return e.Add(http.MethodHead, path, h, m...)
 }
 
 // OPTIONS registers a new OPTIONS route for a path with matching handler in the
 // router with optional route-level middleware.
 func (e *Echo) OPTIONS(path string, h HandlerFunc, m ...MiddlewareFunc) *Route {
-	return e.Add(OPTIONS, path, h, m...)
+	return e.Add(http.MethodOptions, path, h, m...)
 }
 
 // PATCH registers a new PATCH route for a path with matching handler in the
 // router with optional route-level middleware.
 func (e *Echo) PATCH(path string, h HandlerFunc, m ...MiddlewareFunc) *Route {
-	return e.Add(PATCH, path, h, m...)
+	return e.Add(http.MethodPatch, path, h, m...)
 }
 
 // POST registers a new POST route for a path with matching handler in the
 // router with optional route-level middleware.
 func (e *Echo) POST(path string, h HandlerFunc, m ...MiddlewareFunc) *Route {
-	return e.Add(POST, path, h, m...)
+	return e.Add(http.MethodPost, path, h, m...)
 }
 
 // PUT registers a new PUT route for a path with matching handler in the
 // router with optional route-level middleware.
 func (e *Echo) PUT(path string, h HandlerFunc, m ...MiddlewareFunc) *Route {
-	return e.Add(PUT, path, h, m...)
+	return e.Add(http.MethodPut, path, h, m...)
 }
 
 // TRACE registers a new TRACE route for a path with matching handler in the
 // router with optional route-level middleware.
 func (e *Echo) TRACE(path string, h HandlerFunc, m ...MiddlewareFunc) *Route {
-	return e.Add(TRACE, path, h, m...)
+	return e.Add(http.MethodTrace, path, h, m...)
 }
 
 // Any registers a new route for all HTTP methods and path with matching handler
 // in the router with optional route-level middleware.
 func (e *Echo) Any(path string, handler HandlerFunc, middleware ...MiddlewareFunc) []*Route {
-	routes := make([]*Route, 0)
-	for _, m := range methods {
-		routes = append(routes, e.Add(m, path, handler, middleware...))
+	routes := make([]*Route, len(methods))
+	for i, m := range methods {
+		routes[i] = e.Add(m, path, handler, middleware...)
 	}
 	return routes
 }
@@ -420,9 +437,9 @@ func (e *Echo) Any(path string, handler HandlerFunc, middleware ...MiddlewareFun
 // Match registers a new route for multiple HTTP methods and path with matching
 // handler in the router with optional route-level middleware.
 func (e *Echo) Match(methods []string, path string, handler HandlerFunc, middleware ...MiddlewareFunc) []*Route {
-	routes := make([]*Route, 0)
-	for _, m := range methods {
-		routes = append(routes, e.Add(m, path, handler, middleware...))
+	routes := make([]*Route, len(methods))
+	for i, m := range methods {
+		routes[i] = e.Add(m, path, handler, middleware...)
 	}
 	return routes
 }
@@ -438,7 +455,7 @@ func (e *Echo) Static(prefix, root string) *Route {
 
 func static(i i, prefix, root string) *Route {
 	h := func(c Context) error {
-		p, err := PathUnescape(c.Param("*"))
+		p, err := url.PathUnescape(c.Param("*"))
 		if err != nil {
 			return err
 		}
@@ -453,11 +470,11 @@ func static(i i, prefix, root string) *Route {
 	return i.GET(prefix+"/*", h)
 }
 
-// File registers a new route with path to serve a static file.
-func (e *Echo) File(path, file string) *Route {
+// File registers a new route with path to serve a static file with optional route-level middleware.
+func (e *Echo) File(path, file string, m ...MiddlewareFunc) *Route {
 	return e.GET(path, func(c Context) error {
 		return c.File(file)
-	})
+	}, m...)
 }
 
 // Add registers a new route for an HTTP method and path with matching handler
@@ -525,7 +542,7 @@ func (e *Echo) Reverse(name string, params ...interface{}) string {
 
 // Routes returns the registered routes.
 func (e *Echo) Routes() []*Route {
-	routes := []*Route{}
+	routes := make([]*Route, 0, len(e.router.routes))
 	for _, v := range e.router.routes {
 		routes = append(routes, v)
 	}
@@ -546,39 +563,39 @@ func (e *Echo) ReleaseContext(c Context) {
 
 // ServeHTTP implements `http.Handler` interface, which serves HTTP requests.
 func (e *Echo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Acquire lock
-	// e.Mutex.RLock()
-	// defer e.Mutex.RUnlock()
-
 	// Acquire context
 	c := e.pool.Get().(*context)
-	defer e.pool.Put(c)
 	c.Reset(r, w)
 
-	// Middleware
-	h := func(c Context) error {
-		method := r.Method
-		path := r.URL.RawPath
-		if path == "" {
-			path = r.URL.Path
-		}
-		e.router.Find(method, path, c)
-		h := c.Handler()
+	h := NotFoundHandler
+
+	if e.premiddleware == nil {
+		e.router.Find(r.Method, getPath(r), c)
+		h = c.Handler()
 		for i := len(e.middleware) - 1; i >= 0; i-- {
 			h = e.middleware[i](h)
 		}
-		return h(c)
-	}
-
-	// Premiddleware
-	for i := len(e.premiddleware) - 1; i >= 0; i-- {
-		h = e.premiddleware[i](h)
+	} else {
+		h = func(c Context) error {
+			e.router.Find(r.Method, getPath(r), c)
+			h := c.Handler()
+			for i := len(e.middleware) - 1; i >= 0; i-- {
+				h = e.middleware[i](h)
+			}
+			return h(c)
+		}
+		for i := len(e.premiddleware) - 1; i >= 0; i-- {
+			h = e.premiddleware[i](h)
+		}
 	}
 
 	// Execute chain
 	if err := h(c); err != nil {
 		e.HTTPErrorHandler(err, c)
 	}
+
+	// Release context
+	e.pool.Put(c)
 }
 
 // Start starts an HTTP server.
@@ -623,14 +640,14 @@ func (e *Echo) startTLS(address string) error {
 func (e *Echo) StartServer(s *http.Server) (err error) {
 	// Setup
 	e.colorer.SetOutput(e.Logger.Output())
-	s.ErrorLog = e.stdLogger
+	s.ErrorLog = e.StdLogger
 	s.Handler = e
 	if e.Debug {
 		e.Logger.SetLevel(log.DEBUG)
 	}
 
 	if !e.HideBanner {
-		e.colorer.Printf(banner, e.colorer.Red("v"+version), e.colorer.Blue(website))
+		e.colorer.Printf(banner, e.colorer.Red("v"+Version), e.colorer.Blue(website))
 	}
 
 	if s.TLSConfig == nil {
@@ -640,7 +657,7 @@ func (e *Echo) StartServer(s *http.Server) (err error) {
 				return err
 			}
 		}
-		if !e.HideBanner {
+		if !e.HidePort {
 			e.colorer.Printf("⇨ http server started on %s\n", e.colorer.Green(e.Listener.Addr()))
 		}
 		return s.Serve(e.Listener)
@@ -652,10 +669,28 @@ func (e *Echo) StartServer(s *http.Server) (err error) {
 		}
 		e.TLSListener = tls.NewListener(l, s.TLSConfig)
 	}
-	if !e.HideBanner {
+	if !e.HidePort {
 		e.colorer.Printf("⇨ https server started on %s\n", e.colorer.Green(e.TLSListener.Addr()))
 	}
 	return s.Serve(e.TLSListener)
+}
+
+// Close immediately stops the server.
+// It internally calls `http.Server#Close()`.
+func (e *Echo) Close() error {
+	if err := e.TLSServer.Close(); err != nil {
+		return err
+	}
+	return e.Server.Close()
+}
+
+// Shutdown stops the server gracefully.
+// It internally calls `http.Server#Shutdown()`.
+func (e *Echo) Shutdown(ctx stdContext.Context) error {
+	if err := e.TLSServer.Shutdown(ctx); err != nil {
+		return err
+	}
+	return e.Server.Shutdown(ctx)
 }
 
 // NewHTTPError creates a new HTTPError instance.
@@ -670,6 +705,12 @@ func NewHTTPError(code int, message ...interface{}) *HTTPError {
 // Error makes it compatible with `error` interface.
 func (he *HTTPError) Error() string {
 	return fmt.Sprintf("code=%d, message=%v", he.Code, he.Message)
+}
+
+// SetInternal sets error to HTTPError.Internal
+func (he *HTTPError) SetInternal(err error) *HTTPError {
+	he.Internal = err
+	return he
 }
 
 // WrapHandler wraps `http.Handler` into `echo.HandlerFunc`.
@@ -693,6 +734,14 @@ func WrapMiddleware(m func(http.Handler) http.Handler) MiddlewareFunc {
 	}
 }
 
+func getPath(r *http.Request) string {
+	path := r.URL.RawPath
+	if path == "" {
+		path = r.URL.Path
+	}
+	return path
+}
+
 func handlerName(h HandlerFunc) string {
 	t := reflect.ValueOf(h).Type()
 	if t.Kind() == reflect.Func {
@@ -700,6 +749,11 @@ func handlerName(h HandlerFunc) string {
 	}
 	return t.String()
 }
+
+// // PathUnescape is wraps `url.PathUnescape`
+// func PathUnescape(s string) (string, error) {
+// 	return url.PathUnescape(s)
+// }
 
 // tcpKeepAliveListener sets TCP keep-alive timeouts on accepted
 // connections. It's used by ListenAndServe and ListenAndServeTLS so

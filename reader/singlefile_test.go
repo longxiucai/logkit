@@ -10,12 +10,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	. "github.com/qiniu/logkit/reader/test"
-	. "github.com/qiniu/logkit/utils/models"
-	utilsos "github.com/qiniu/logkit/utils/os"
+	. "github.com/longxiucai/logkit/reader/test"
+	. "github.com/longxiucai/logkit/utils/models"
+	utilsos "github.com/longxiucai/logkit/utils/os"
 )
 
-//测试single file rotate的情况
+// 测试single file rotate的情况
 func Test_singleFileRotate(t *testing.T) {
 	fileName := filepath.Join(os.TempDir(), "test.singleFile")
 	fileNameRotated := filepath.Join(os.TempDir(), "test.singleFile.rotated")
@@ -70,7 +70,7 @@ func Test_singleFileRotate(t *testing.T) {
 	assert.True(t, strings.Contains(string(filedone), fileNameRotated))
 }
 
-//测试single file不rotate的情况
+// 测试single file不rotate的情况
 func Test_singleFileNotRotate(t *testing.T) {
 	fileName := os.TempDir() + "/test.singleFile"
 	metaDir := os.TempDir() + "/rotates"

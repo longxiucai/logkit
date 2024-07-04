@@ -13,7 +13,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/qiniu/logkit/times"
+	"github.com/longxiucai/logkit/times"
 )
 
 func Test_ReadDirSortByTime(t *testing.T) {
@@ -778,7 +778,7 @@ func BenchmarkCheckPandoraKey(b *testing.B) {
 	}
 }
 
-//1000000          1493 ns/op          32 B/op           2 allocs/op
+// 1000000          1493 ns/op          32 B/op           2 allocs/op
 func BenchmarkDeepConvertKey(b *testing.B) {
 	b.ReportAllocs()
 	testDatas := []map[string]interface{}{
@@ -945,7 +945,7 @@ func Test_DeepConvertKey(t *testing.T) {
 	}
 }
 
-//1000000          1647 ns/op           0 B/op           0 allocs/op
+// 1000000          1647 ns/op           0 B/op           0 allocs/op
 func BenchmarkDeepConvertKeyWithCache(b *testing.B) {
 	b.ReportAllocs()
 	testDatas := []map[string]interface{}{

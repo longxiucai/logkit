@@ -1,7 +1,7 @@
 package queuev2
 
 import (
-	. "github.com/qiniu/logkit/utils/models"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 // BackendQueue represents the behavior for the secondary message

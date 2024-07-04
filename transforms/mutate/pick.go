@@ -3,8 +3,8 @@ package mutate
 import (
 	"strings"
 
-	"github.com/qiniu/logkit/transforms"
-	. "github.com/qiniu/logkit/utils/models"
+	"github.com/longxiucai/logkit/transforms"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 const TYPE = "pick"

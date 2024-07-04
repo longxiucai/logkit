@@ -3,7 +3,7 @@ package metric
 import (
 	"sort"
 
-	. "github.com/qiniu/logkit/utils/models"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 func GetMetricTypeKey() map[string]interface{} {

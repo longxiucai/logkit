@@ -15,10 +15,10 @@ import (
 
 	log "k8s.io/klog/v2"
 
-	"github.com/qiniu/logkit/conf"
-	"github.com/qiniu/logkit/reader"
-	"github.com/qiniu/logkit/utils"
-	. "github.com/qiniu/logkit/utils/models"
+	"github.com/longxiucai/logkit/conf"
+	"github.com/longxiucai/logkit/reader"
+	"github.com/longxiucai/logkit/utils"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 var (

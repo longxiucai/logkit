@@ -6,9 +6,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/qiniu/logkit/conf"
-	"github.com/qiniu/logkit/reader"
-	. "github.com/qiniu/logkit/reader/test"
+	"github.com/longxiucai/logkit/conf"
+	"github.com/longxiucai/logkit/reader"
+	. "github.com/longxiucai/logkit/reader/test"
 )
 
 func Test_scriptFile(t *testing.T) {

@@ -1,8 +1,8 @@
 package system
 
 import (
-	"github.com/qiniu/logkit/metric"
-	. "github.com/qiniu/logkit/utils/models"
+	"github.com/longxiucai/logkit/metric"
+	. "github.com/longxiucai/logkit/utils/models"
 
 	"github.com/shirou/gopsutil/cpu"
 )

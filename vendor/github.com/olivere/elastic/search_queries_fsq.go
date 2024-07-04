@@ -10,7 +10,7 @@ package elastic
 // to compute the score on a filtered set of documents.
 //
 // For more details, see
-// https://www.elastic.co/guide/en/elasticsearch/reference/6.0/query-dsl-function-score-query.html
+// https://www.elastic.co/guide/en/elasticsearch/reference/6.8/query-dsl-function-score-query.html
 type FunctionScoreQuery struct {
 	query      Query
 	filter     Query
@@ -21,7 +21,6 @@ type FunctionScoreQuery struct {
 	filters    []Query
 	scoreFuncs []ScoreFunction
 	minScore   *float64
-	weight     *float64
 }
 
 // NewFunctionScoreQuery creates and initializes a new function score query.
@@ -114,18 +113,7 @@ func (q *FunctionScoreQuery) Source() (interface{}, error) {
 		query["filter"] = src
 	}
 
-	if len(q.filters) == 1 && q.filters[0] == nil {
-		// Weight needs to be serialized on this level.
-		if weight := q.scoreFuncs[0].GetWeight(); weight != nil {
-			query["weight"] = weight
-		}
-		// Serialize the score function
-		src, err := q.scoreFuncs[0].Source()
-		if err != nil {
-			return nil, err
-		}
-		query[q.scoreFuncs[0].Name()] = src
-	} else {
+	if len(q.filters) > 0 {
 		funcs := make([]interface{}, len(q.filters))
 		for i, filter := range q.filters {
 			hsh := make(map[string]interface{})

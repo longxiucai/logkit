@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net"
 
-	. "github.com/qiniu/logkit/utils/models"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 type OSInfo struct {

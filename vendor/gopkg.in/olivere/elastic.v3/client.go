@@ -6,6 +6,7 @@ package elastic
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,14 +17,11 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"golang.org/x/net/context"
-	"golang.org/x/net/context/ctxhttp"
 )
 
 const (
 	// Version is the current version of Elastic.
-	Version = "3.0.68"
+	Version = "3.0.75"
 
 	// DefaultURL is the default endpoint of Elasticsearch on the local machine.
 	// It is used e.g. when initializing a new Client without a specific URL.
@@ -790,8 +788,12 @@ func (c *Client) sniff(timeout time.Duration) error {
 
 	// Start sniffing on all found URLs
 	ch := make(chan []*conn, len(urls))
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
 	for _, url := range urls {
-		go func(url string) { ch <- c.sniffNode(url) }(url)
+		go func(url string) { ch <- c.sniffNode(ctx, url) }(url)
 	}
 
 	// Wait for the results to come back, or the process times out.
@@ -802,7 +804,7 @@ func (c *Client) sniff(timeout time.Duration) error {
 				c.updateConns(conns)
 				return nil
 			}
-		case <-time.After(timeout):
+		case <-ctx.Done():
 			// We get here if no cluster responds in time
 			return ErrNoClient
 		}
@@ -813,7 +815,7 @@ func (c *Client) sniff(timeout time.Duration) error {
 // in sniff. If successful, it returns the list of node URLs extracted
 // from the result of calling Nodes Info API. Otherwise, an empty array
 // is returned.
-func (c *Client) sniffNode(url string) []*conn {
+func (c *Client) sniffNode(ctx context.Context, url string) []*conn {
 	var nodes []*conn
 
 	// Call the Nodes Info API at /_nodes/http
@@ -828,7 +830,7 @@ func (c *Client) sniffNode(url string) []*conn {
 	}
 	c.mu.RUnlock()
 
-	res, err := c.c.Do((*http.Request)(req))
+	res, err := c.c.Do((*http.Request)(req).WithContext(ctx))
 	if err != nil {
 		return nodes
 	}
@@ -843,21 +845,11 @@ func (c *Client) sniffNode(url string) []*conn {
 	var info NodesInfoResponse
 	if err := json.NewDecoder(res.Body).Decode(&info); err == nil {
 		if len(info.Nodes) > 0 {
-			switch c.scheme {
-			case "https":
-				for nodeID, node := range info.Nodes {
-					url := c.extractHostname("https", node.HTTPSAddress)
-					if url != "" {
-						if c.snifferCallback(node) {
-							nodes = append(nodes, newConn(nodeID, url))
-						}
-					}
-				}
-			default:
-				for nodeID, node := range info.Nodes {
-					url := c.extractHostname("http", node.HTTPAddress)
-					if url != "" {
-						if c.snifferCallback(node) {
+			for nodeID, node := range info.Nodes {
+				if c.snifferCallback(node) {
+					if node.HTTP != nil && len(node.HTTP.PublishAddress) > 0 {
+						url := c.extractHostname(c.scheme, node.HTTP.PublishAddress)
+						if url != "" {
 							nodes = append(nodes, newConn(nodeID, url))
 						}
 					}
@@ -962,34 +954,52 @@ func (c *Client) healthcheck(timeout time.Duration, force bool) {
 	conns := c.conns
 	c.connsMu.RUnlock()
 
-	timeoutInMillis := int64(timeout / time.Millisecond)
-
 	for _, conn := range conns {
-		params := make(url.Values)
-		params.Set("timeout", fmt.Sprintf("%dms", timeoutInMillis))
-		req, err := NewRequest("HEAD", conn.URL()+"/?"+params.Encode())
-		if err == nil {
+		// Run the HEAD request against ES with a timeout
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+
+		// Goroutine executes the HTTP request, returns an error and sets status
+		var status int
+		errc := make(chan error, 1)
+		go func(url string) {
+			req, err := NewRequest("HEAD", url)
+			if err != nil {
+				errc <- err
+				return
+			}
 			if basicAuth {
 				req.SetBasicAuth(basicAuthUsername, basicAuthPassword)
 			}
-			res, err := c.c.Do((*http.Request)(req))
-			if err == nil {
+			res, err := c.c.Do((*http.Request)(req).WithContext(ctx))
+			if res != nil {
+				status = res.StatusCode
 				if res.Body != nil {
-					defer res.Body.Close()
+					res.Body.Close()
 				}
-				if res.StatusCode >= 200 && res.StatusCode < 300 {
-					conn.MarkAsAlive()
-				} else {
-					conn.MarkAsDead()
-					c.errorf("elastic: %s is dead [status=%d]", conn.URL(), res.StatusCode)
-				}
-			} else {
-				c.errorf("elastic: %s is dead", conn.URL())
-				conn.MarkAsDead()
 			}
-		} else {
+			errc <- err
+		}(conn.URL())
+
+		// Wait for the Goroutine (or its timeout)
+		select {
+		case <-ctx.Done(): // timeout
 			c.errorf("elastic: %s is dead", conn.URL())
 			conn.MarkAsDead()
+			break
+		case err := <-errc:
+			if err != nil {
+				c.errorf("elastic: %s is dead", conn.URL())
+				conn.MarkAsDead()
+				break
+			}
+			if status >= 200 && status < 300 {
+				conn.MarkAsAlive()
+			} else {
+				conn.MarkAsDead()
+				c.errorf("elastic: %s is dead [status=%d]", conn.URL(), status)
+			}
+			break
 		}
 	}
 }
@@ -1102,9 +1112,6 @@ func (c *Client) PerformRequest(method, path string, params url.Values, body int
 // Optionally, a list of HTTP error codes to ignore can be passed.
 // This is necessary for services that expect e.g. HTTP status 404 as a
 // valid outcome (Exists, IndicesExists, IndicesTypeExists).
-//
-// If ctx is not nil, it uses the ctxhttp to do the request,
-// enabling both request cancelation as well as timeout.
 func (c *Client) PerformRequestC(ctx context.Context, method, path string, params url.Values, body interface{}, ignoreErrors ...int) (*Response, error) {
 	start := time.Now().UTC()
 
@@ -1182,12 +1189,10 @@ func (c *Client) PerformRequestC(ctx context.Context, method, path string, param
 		c.dumpRequest((*http.Request)(req))
 
 		// Get response
-		var res *http.Response
 		if ctx == nil {
-			res, err = c.c.Do((*http.Request)(req))
-		} else {
-			res, err = ctxhttp.Do(ctx, c.c, (*http.Request)(req))
+			ctx = context.Background()
 		}
+		res, err := c.c.Do((*http.Request)(req).WithContext(ctx))
 		if err == context.Canceled || err == context.DeadlineExceeded {
 			// Proceed, but don't mark the node as dead
 			return nil, err

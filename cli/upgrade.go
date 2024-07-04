@@ -15,8 +15,8 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/qiniu/logkit/utils/models"
-	utilsos "github.com/qiniu/logkit/utils/os"
+	. "github.com/longxiucai/logkit/utils/models"
+	utilsos "github.com/longxiucai/logkit/utils/os"
 )
 
 const (

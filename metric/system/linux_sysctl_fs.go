@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package system
@@ -7,8 +8,8 @@ import (
 	"io/ioutil"
 	"strconv"
 
-	"github.com/qiniu/logkit/metric"
-	. "github.com/qiniu/logkit/utils/models"
+	"github.com/longxiucai/logkit/metric"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 // https://www.kernel.org/doc/Documentation/sysctl/fs.txt

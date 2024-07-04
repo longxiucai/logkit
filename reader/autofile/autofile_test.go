@@ -9,8 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/qiniu/logkit/reader"
-	. "github.com/qiniu/logkit/utils/models"
+	"github.com/longxiucai/logkit/reader"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 func TestMatchMode(t *testing.T) {

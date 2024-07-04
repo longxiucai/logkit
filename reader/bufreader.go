@@ -23,7 +23,7 @@ import (
 
 	log "k8s.io/klog/v2"
 
-	. "github.com/qiniu/logkit/utils/models"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 const (

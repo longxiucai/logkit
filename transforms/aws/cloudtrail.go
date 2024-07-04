@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/qiniu/logkit/transforms"
-	. "github.com/qiniu/logkit/utils/models"
+	"github.com/longxiucai/logkit/transforms"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 const cloudTrailRecords = "Records"
@@ -40,7 +40,7 @@ func (g *CloudTrail) Transform(datas []Data) (retdata []Data, fmtErr error) {
 	return retdata, fmtErr
 }
 
-//如果有错误发生，要把原来的数据给回去
+// 如果有错误发生，要把原来的数据给回去
 func getCloudTrailData(data Data) (retdata []Data, err error) {
 	records, ok := data[cloudTrailRecords]
 	if !ok {

@@ -7,7 +7,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/qiniu/logkit/conf"
+	"github.com/longxiucai/logkit/conf"
 )
 
 const (

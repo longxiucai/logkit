@@ -16,9 +16,9 @@ import (
 
 	log "k8s.io/klog/v2"
 
-	"github.com/qiniu/logkit/rateio"
-	"github.com/qiniu/logkit/utils"
-	. "github.com/qiniu/logkit/utils/models"
+	"github.com/longxiucai/logkit/rateio"
+	"github.com/longxiucai/logkit/utils"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 var _ BackendQueue = &diskQueue{}

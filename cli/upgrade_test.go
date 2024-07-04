@@ -14,12 +14,12 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/qiniu/logkit/utils/models"
+	. "github.com/longxiucai/logkit/utils/models"
 	log "k8s.io/klog/v2"
 
-	"github.com/json-iterator/go"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/labstack/echo"
-	utilsos "github.com/qiniu/logkit/utils/os"
+	utilsos "github.com/longxiucai/logkit/utils/os"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -9,9 +9,9 @@ import (
 	log "k8s.io/klog/v2"
 
 	"github.com/influxdata/telegraf/plugins/inputs/memcached"
-	"github.com/qiniu/logkit/metric"
-	"github.com/qiniu/logkit/metric/telegraf"
-	. "github.com/qiniu/logkit/utils/models"
+	"github.com/longxiucai/logkit/metric"
+	"github.com/longxiucai/logkit/metric/telegraf"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 const MetricName = "memcached"

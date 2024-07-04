@@ -14,14 +14,14 @@ package main
 // 	"github.com/labstack/echo"
 // 	log "k8s.io/klog/v2"
 
-// 	"github.com/qiniu/logkit/cli"
-// 	config "github.com/qiniu/logkit/conf"
-// 	_ "github.com/qiniu/logkit/metric/all"
-// 	"github.com/qiniu/logkit/mgr"
-// 	"github.com/qiniu/logkit/times"
-// 	_ "github.com/qiniu/logkit/transforms/builtin"
-// 	. "github.com/qiniu/logkit/utils/models"
-// 	utilsos "github.com/qiniu/logkit/utils/os"
+// 	"github.com/longxiucai/logkit/cli"
+// 	config "github.com/longxiucai/logkit/conf"
+// 	_ "github.com/longxiucai/logkit/metric/all"
+// 	"github.com/longxiucai/logkit/mgr"
+// 	"github.com/longxiucai/logkit/times"
+// 	_ "github.com/longxiucai/logkit/transforms/builtin"
+// 	. "github.com/longxiucai/logkit/utils/models"
+// 	utilsos "github.com/longxiucai/logkit/utils/os"
 // )
 
 // // Config of logkit

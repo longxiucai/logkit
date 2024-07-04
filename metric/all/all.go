@@ -1,8 +1,8 @@
 package all
 
 import (
-	_ "github.com/qiniu/logkit/metric/curl"
-	_ "github.com/qiniu/logkit/metric/system"
-	_ "github.com/qiniu/logkit/metric/telegraf"
-	_ "github.com/qiniu/logkit/metric/telegraf/memcached"
+	_ "github.com/longxiucai/logkit/metric/curl"
+	_ "github.com/longxiucai/logkit/metric/system"
+	_ "github.com/longxiucai/logkit/metric/telegraf"
+	_ "github.com/longxiucai/logkit/metric/telegraf/memcached"
 )

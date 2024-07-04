@@ -7,8 +7,8 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/qiniu/logkit/conf"
-	"github.com/qiniu/logkit/reader"
+	"github.com/longxiucai/logkit/conf"
+	"github.com/longxiucai/logkit/reader"
 )
 
 func TestRedisReaderWithString(t *testing.T) {

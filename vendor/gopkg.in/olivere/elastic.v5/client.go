@@ -9,20 +9,24 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/pkg/errors"
+
+	"gopkg.in/olivere/elastic.v5/config"
 )
 
 const (
 	// Version is the current version of Elastic.
-	Version = "5.0.41"
+	Version = "5.0.86"
 
 	// DefaultURL is the default endpoint of Elasticsearch on the local machine.
 	// It is used e.g. when initializing a new Client without a specific URL.
@@ -93,6 +97,9 @@ var (
 
 	// noRetries is a retrier that does not retry.
 	noRetries = NewStopRetrier()
+
+	// noDeprecationLog is a no-op for logging deprecations.
+	noDeprecationLog = func(*http.Request, *http.Response) {}
 )
 
 // ClientOptionFunc is a function that configures a Client.
@@ -107,12 +114,13 @@ type Client struct {
 	conns   []*conn      // all connections
 	cindex  int          // index into conns
 
-	mu                        sync.RWMutex    // guards the next block
-	urls                      []string        // set of URLs passed initially to the client
-	running                   bool            // true if the client's background processes are running
-	errorlog                  Logger          // error log for critical messages
-	infolog                   Logger          // information log for e.g. response times
-	tracelog                  Logger          // trace log for debugging
+	mu                        sync.RWMutex // guards the next block
+	urls                      []string     // set of URLs passed initially to the client
+	running                   bool         // true if the client's background processes are running
+	errorlog                  Logger       // error log for critical messages
+	infolog                   Logger       // information log for e.g. response times
+	tracelog                  Logger       // trace log for debugging
+	deprecationlog            func(*http.Request, *http.Response)
 	scheme                    string          // http or https
 	healthcheckEnabled        bool            // healthchecks enabled or disabled
 	healthcheckTimeoutStartup time.Duration   // time the healthcheck waits for a response from Elasticsearch on startup
@@ -133,6 +141,7 @@ type Client struct {
 	requiredPlugins           []string        // list of required plugins
 	gzipEnabled               bool            // gzip compression enabled or disabled (default)
 	retrier                   Retrier         // strategy for retries
+	headers                   http.Header     // a list of default headers to add to each request
 }
 
 // NewClient creates a new client to work with Elasticsearch.
@@ -207,6 +216,7 @@ func NewClient(options ...ClientOptionFunc) (*Client, error) {
 		sendGetBodyAs:             DefaultSendGetBodyAs,
 		gzipEnabled:               DefaultGzipEnabled,
 		retrier:                   noRetries, // no retries by default
+		deprecationlog:            noDeprecationLog,
 	}
 
 	// Run the options on it
@@ -288,6 +298,50 @@ func NewClient(options ...ClientOptionFunc) (*Client, error) {
 	return c, nil
 }
 
+// NewClientFromConfig initializes a client from a configuration.
+func NewClientFromConfig(cfg *config.Config) (*Client, error) {
+	var options []ClientOptionFunc
+	if cfg != nil {
+		if cfg.URL != "" {
+			options = append(options, SetURL(cfg.URL))
+		}
+		if cfg.Errorlog != "" {
+			f, err := os.OpenFile(cfg.Errorlog, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			if err != nil {
+				return nil, errors.Wrap(err, "unable to initialize error log")
+			}
+			l := log.New(f, "", 0)
+			options = append(options, SetErrorLog(l))
+		}
+		if cfg.Tracelog != "" {
+			f, err := os.OpenFile(cfg.Tracelog, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			if err != nil {
+				return nil, errors.Wrap(err, "unable to initialize trace log")
+			}
+			l := log.New(f, "", 0)
+			options = append(options, SetTraceLog(l))
+		}
+		if cfg.Infolog != "" {
+			f, err := os.OpenFile(cfg.Infolog, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			if err != nil {
+				return nil, errors.Wrap(err, "unable to initialize info log")
+			}
+			l := log.New(f, "", 0)
+			options = append(options, SetInfoLog(l))
+		}
+		if cfg.Username != "" || cfg.Password != "" {
+			options = append(options, SetBasicAuth(cfg.Username, cfg.Password))
+		}
+		if cfg.Sniff != nil {
+			options = append(options, SetSniff(*cfg.Sniff))
+		}
+		if cfg.Healthcheck != nil {
+			options = append(options, SetHealthcheck(*cfg.Healthcheck))
+		}
+	}
+	return NewClient(options...)
+}
+
 // NewSimpleClient creates a new short-lived Client that can be used in
 // use cases where you need e.g. one client per request.
 //
@@ -324,6 +378,7 @@ func NewSimpleClient(options ...ClientOptionFunc) (*Client, error) {
 		sendGetBodyAs:             DefaultSendGetBodyAs,
 		gzipEnabled:               DefaultGzipEnabled,
 		retrier:                   noRetries, // no retries by default
+		deprecationlog:            noDeprecationLog,
 	}
 
 	// Run the options on it
@@ -628,6 +683,15 @@ func SetRetrier(retrier Retrier) ClientOptionFunc {
 			retrier = noRetries // no retries by default
 		}
 		c.retrier = retrier
+		return nil
+	}
+}
+
+// SetHeaders adds a list of default HTTP headers that will be added to
+// each requests executed by PerformRequest.
+func SetHeaders(headers http.Header) ClientOptionFunc {
+	return func(c *Client) error {
+		c.headers = headers
 		return nil
 	}
 }
@@ -1014,7 +1078,6 @@ func (c *Client) healthcheck(timeout time.Duration, force bool) {
 		case <-ctx.Done(): // timeout
 			c.errorf("elastic: %s is dead", conn.URL())
 			conn.MarkAsDead()
-			break
 		case err := <-errc:
 			if err != nil {
 				c.errorf("elastic: %s is dead", conn.URL())
@@ -1027,7 +1090,6 @@ func (c *Client) healthcheck(timeout time.Duration, force bool) {
 				conn.MarkAsDead()
 				c.errorf("elastic: %s is dead [status=%d]", conn.URL(), status)
 			}
-			break
 		}
 	}
 }
@@ -1043,13 +1105,9 @@ func (c *Client) startupHealthcheck(timeout time.Duration) error {
 	c.mu.Unlock()
 
 	// If we don't get a connection after "timeout", we bail.
+	var lastErr error
 	start := time.Now()
 	for {
-		// Make a copy of the HTTP client provided via options to respect
-		// settings like Basic Auth or a user-specified http.Transport.
-		cl := new(http.Client)
-		*cl = *c.c
-		cl.Timeout = timeout
 		for _, url := range urls {
 			req, err := http.NewRequest("HEAD", url, nil)
 			if err != nil {
@@ -1058,15 +1116,23 @@ func (c *Client) startupHealthcheck(timeout time.Duration) error {
 			if basicAuth {
 				req.SetBasicAuth(basicAuthUsername, basicAuthPassword)
 			}
-			res, err := cl.Do(req)
+			ctx, cancel := context.WithTimeout(req.Context(), timeout)
+			defer cancel()
+			req = req.WithContext(ctx)
+			res, err := c.c.Do(req)
 			if err == nil && res != nil && res.StatusCode >= 200 && res.StatusCode < 300 {
 				return nil
+			} else if err != nil {
+				lastErr = err
 			}
 		}
 		time.Sleep(1 * time.Second)
-		if time.Now().Sub(start) > timeout {
+		if time.Since(start) > timeout {
 			break
 		}
+	}
+	if lastErr != nil {
+		return errors.Wrapf(ErrNoClient, "health check timeout: %v", lastErr)
 	}
 	return errors.Wrap(ErrNoClient, "health check timeout")
 }
@@ -1124,13 +1190,54 @@ func (c *Client) mustActiveConn() error {
 	return errors.Wrap(ErrNoClient, "no active connection found")
 }
 
+// -- PerformRequest --
+
+// PerformRequestOptions must be passed into PerformRequest.
+type PerformRequestOptions struct {
+	Method          string
+	Path            string
+	Params          url.Values
+	Body            interface{}
+	ContentType     string
+	IgnoreErrors    []int
+	Retrier         Retrier
+	Headers         http.Header
+	MaxResponseSize int64
+}
+
 // PerformRequest does a HTTP request to Elasticsearch.
+// See PerformRequestWithContentType for details.
+func (c *Client) PerformRequest(ctx context.Context, method, path string, params url.Values, body interface{}, ignoreErrors ...int) (*Response, error) {
+	return c.PerformRequestWithOptions(ctx, PerformRequestOptions{
+		Method:       method,
+		Path:         path,
+		Params:       params,
+		Body:         body,
+		ContentType:  "application/json",
+		IgnoreErrors: ignoreErrors,
+	})
+}
+
+// PerformRequestWithContentType executes a HTTP request with a specific content type.
 // It returns a response (which might be nil) and an error on failure.
 //
 // Optionally, a list of HTTP error codes to ignore can be passed.
 // This is necessary for services that expect e.g. HTTP status 404 as a
 // valid outcome (Exists, IndicesExists, IndicesTypeExists).
-func (c *Client) PerformRequest(ctx context.Context, method, path string, params url.Values, body interface{}, ignoreErrors ...int) (*Response, error) {
+func (c *Client) PerformRequestWithContentType(ctx context.Context, method, path string, params url.Values, body interface{}, contentType string, ignoreErrors ...int) (*Response, error) {
+	return c.PerformRequestWithOptions(ctx, PerformRequestOptions{
+		Method:       method,
+		Path:         path,
+		Params:       params,
+		Body:         body,
+		ContentType:  contentType,
+		IgnoreErrors: ignoreErrors,
+	})
+}
+
+// PerformRequestWithOptions executes a HTTP request with the specified options.
+// It returns a response (which might be nil) and an error on failure.
+func (c *Client) PerformRequestWithOptions(ctx context.Context, opt PerformRequestOptions) (*Response, error) {
 	start := time.Now().UTC()
 
 	c.mu.RLock()
@@ -1140,6 +1247,12 @@ func (c *Client) PerformRequest(ctx context.Context, method, path string, params
 	basicAuthPassword := c.basicAuthPassword
 	sendGetBodyAs := c.sendGetBodyAs
 	gzipEnabled := c.gzipEnabled
+	healthcheckEnabled := c.healthcheckEnabled
+	retrier := c.retrier
+	if opt.Retrier != nil {
+		retrier = opt.Retrier
+	}
+	defaultHeaders := c.headers
 	c.mu.RUnlock()
 
 	var err error
@@ -1150,14 +1263,14 @@ func (c *Client) PerformRequest(ctx context.Context, method, path string, params
 	var n int
 
 	// Change method if sendGetBodyAs is specified.
-	if method == "GET" && body != nil && sendGetBodyAs != "GET" {
-		method = sendGetBodyAs
+	if opt.Method == "GET" && opt.Body != nil && sendGetBodyAs != "GET" {
+		opt.Method = sendGetBodyAs
 	}
 
 	for {
-		pathWithParams := path
-		if len(params) > 0 {
-			pathWithParams += "?" + params.Encode()
+		pathWithParams := opt.Path
+		if len(opt.Params) > 0 {
+			pathWithParams += "?" + opt.Params.Encode()
 		}
 
 		// Get a connection
@@ -1167,8 +1280,12 @@ func (c *Client) PerformRequest(ctx context.Context, method, path string, params
 			if !retried {
 				// Force a healtcheck as all connections seem to be dead.
 				c.healthcheck(timeout, false)
+				if healthcheckEnabled {
+					retried = true
+					continue
+				}
 			}
-			wait, ok, rerr := c.retrier.Retry(ctx, n, nil, nil, err)
+			wait, ok, rerr := retrier.Retry(ctx, n, nil, nil, err)
 			if rerr != nil {
 				return nil, rerr
 			}
@@ -1184,21 +1301,38 @@ func (c *Client) PerformRequest(ctx context.Context, method, path string, params
 			return nil, err
 		}
 
-		req, err = NewRequest(method, conn.URL()+pathWithParams)
+		req, err = NewRequest(opt.Method, conn.URL()+pathWithParams)
 		if err != nil {
-			c.errorf("elastic: cannot create request for %s %s: %v", strings.ToUpper(method), conn.URL()+pathWithParams, err)
+			c.errorf("elastic: cannot create request for %s %s: %v", strings.ToUpper(opt.Method), conn.URL()+pathWithParams, err)
 			return nil, err
 		}
 
 		if basicAuth {
 			req.SetBasicAuth(basicAuthUsername, basicAuthPassword)
 		}
+		if opt.ContentType != "" {
+			req.Header.Set("Content-Type", opt.ContentType)
+		}
+		if len(opt.Headers) > 0 {
+			for key, value := range opt.Headers {
+				for _, v := range value {
+					req.Header.Add(key, v)
+				}
+			}
+		}
+		if len(defaultHeaders) > 0 {
+			for key, value := range defaultHeaders {
+				for _, v := range value {
+					req.Header.Add(key, v)
+				}
+			}
+		}
 
 		// Set body
-		if body != nil {
-			err = req.SetBody(body, gzipEnabled)
+		if opt.Body != nil {
+			err = req.SetBody(opt.Body, gzipEnabled)
 			if err != nil {
-				c.errorf("elastic: couldn't set body %+v for request: %v", body, err)
+				c.errorf("elastic: couldn't set body %+v for request: %v", opt.Body, err)
 				return nil, err
 			}
 		}
@@ -1208,13 +1342,13 @@ func (c *Client) PerformRequest(ctx context.Context, method, path string, params
 
 		// Get response
 		res, err := c.c.Do((*http.Request)(req).WithContext(ctx))
-		if err == context.Canceled || err == context.DeadlineExceeded {
+		if IsContextErr(err) {
 			// Proceed, but don't mark the node as dead
 			return nil, err
 		}
 		if err != nil {
 			n++
-			wait, ok, rerr := c.retrier.Retry(ctx, n, (*http.Request)(req), res, err)
+			wait, ok, rerr := retrier.Retry(ctx, n, (*http.Request)(req), res, err)
 			if rerr != nil {
 				c.errorf("elastic: %s is dead", conn.URL())
 				conn.MarkAsDead()
@@ -1233,21 +1367,29 @@ func (c *Client) PerformRequest(ctx context.Context, method, path string, params
 			defer res.Body.Close()
 		}
 
-		// Check for errors
-		if err := checkResponse((*http.Request)(req), res, ignoreErrors...); err != nil {
-			// No retry if request succeeded
-			// We still try to return a response.
-			resp, _ = c.newResponse(res)
-			return resp, err
-		}
-
 		// Tracing
 		c.dumpResponse(res)
+
+		// Log deprecation warnings as errors
+		if len(res.Header["Warning"]) > 0 {
+			c.deprecationlog((*http.Request)(req), res)
+			for _, warning := range res.Header["Warning"] {
+				c.errorf("Deprecation warning: %s", warning)
+			}
+		}
+
+		// Check for errors
+		if err := checkResponse((*http.Request)(req), res, opt.IgnoreErrors...); err != nil {
+			// No retry if request succeeded
+			// We still try to return a response.
+			resp, _ = c.newResponse(res, opt.MaxResponseSize)
+			return resp, err
+		}
 
 		// We successfully made a request with this connection
 		conn.MarkAsHealthy()
 
-		resp, err = c.newResponse(res)
+		resp, err = c.newResponse(res, opt.MaxResponseSize)
 		if err != nil {
 			return nil, err
 		}
@@ -1257,7 +1399,7 @@ func (c *Client) PerformRequest(ctx context.Context, method, path string, params
 
 	duration := time.Now().UTC().Sub(start)
 	c.infof("%s %s [status:%d, request:%.3fs]",
-		strings.ToUpper(method),
+		strings.ToUpper(opt.Method),
 		req.URL,
 		resp.StatusCode,
 		float64(int64(duration/time.Millisecond))/1000)
@@ -1367,9 +1509,22 @@ func (c *Client) Explain(index, typ, id string) *ExplainService {
 }
 
 // TODO Search Template
-// TODO Search Shards API
 // TODO Search Exists API
-// TODO Validate API
+
+// Validate allows a user to validate a potentially expensive query without executing it.
+func (c *Client) Validate(indices ...string) *ValidateService {
+	return NewValidateService(c).Index(indices...)
+}
+
+// SearchShards returns statistical information about nodes and shards.
+func (c *Client) SearchShards(indices ...string) *SearchShardsService {
+	return NewSearchShardsService(c).Index(indices...)
+}
+
+// FieldCaps returns statistical information about fields in indices.
+func (c *Client) FieldCaps(indices ...string) *FieldCapsService {
+	return NewFieldCapsService(c).Index(indices...)
+}
 
 // FieldStats returns statistical information about fields in indices.
 func (c *Client) FieldStats(indices ...string) *FieldStatsService {
@@ -1455,6 +1610,11 @@ func (c *Client) IndexGetSettings(indices ...string) *IndicesGetSettingsService 
 // IndexPutSettings sets settings for all, one or more indices.
 func (c *Client) IndexPutSettings(indices ...string) *IndicesPutSettingsService {
 	return NewIndicesPutSettingsService(c).Index(indices...)
+}
+
+// IndexSegments retrieves low level segment information for all, one or more indices.
+func (c *Client) IndexSegments(indices ...string) *IndicesSegmentsService {
+	return NewIndicesSegmentsService(c).Index(indices...)
 }
 
 // IndexAnalyze performs the analysis process on a text and returns the
@@ -1564,6 +1724,36 @@ func (c *Client) GetFieldMapping() *IndicesGetFieldMappingService {
 // TODO cat shards
 // TODO cat segments
 
+// CatAliases returns information about aliases.
+func (c *Client) CatAliases() *CatAliasesService {
+	return NewCatAliasesService(c)
+}
+
+// CatAllocation returns information about the allocation across nodes.
+func (c *Client) CatAllocation() *CatAllocationService {
+	return NewCatAllocationService(c)
+}
+
+// CatCount returns document counts for indices.
+func (c *Client) CatCount() *CatCountService {
+	return NewCatCountService(c)
+}
+
+// CatHealth returns information about cluster health.
+func (c *Client) CatHealth() *CatHealthService {
+	return NewCatHealthService(c)
+}
+
+// CatIndices returns information about indices.
+func (c *Client) CatIndices() *CatIndicesService {
+	return NewCatIndicesService(c)
+}
+
+// CatShards returns information about shards.
+func (c *Client) CatShards() *CatShardsService {
+	return NewCatShardsService(c)
+}
+
 // -- Ingest APIs --
 
 // IngestPutPipeline adds pipelines and updates existing pipelines in
@@ -1623,6 +1813,11 @@ func (c *Client) TasksCancel() *TasksCancelService {
 // TasksList retrieves the list of tasks running on the specified nodes.
 func (c *Client) TasksList() *TasksListService {
 	return NewTasksListService(c)
+}
+
+// TasksGetTask retrieves a task running on the cluster.
+func (c *Client) TasksGetTask() *TasksGetTaskService {
+	return NewTasksGetTaskService(c)
 }
 
 // TODO Pending cluster tasks
@@ -1724,10 +1919,4 @@ func (c *Client) WaitForGreenStatus(timeout string) error {
 // See WaitForStatus for more details.
 func (c *Client) WaitForYellowStatus(timeout string) error {
 	return c.WaitForStatus("yellow", timeout)
-}
-
-// IsConnError unwraps the given error value and checks if it is equal to
-// elastic.ErrNoClient.
-func IsConnErr(err error) bool {
-	return errors.Cause(err) == ErrNoClient
 }

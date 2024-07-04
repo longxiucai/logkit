@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package system
@@ -9,8 +10,8 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/qiniu/logkit/metric"
-	. "github.com/qiniu/logkit/utils/models"
+	"github.com/longxiucai/logkit/metric"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 // /proc/stat file line prefixes to gather stats on:

@@ -12,10 +12,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/qiniu/logkit/conf"
-	. "github.com/qiniu/logkit/reader/test"
-	"github.com/qiniu/logkit/utils"
-	. "github.com/qiniu/logkit/utils/models"
+	"github.com/longxiucai/logkit/conf"
+	. "github.com/longxiucai/logkit/reader/test"
+	"github.com/longxiucai/logkit/utils"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 func createFile(interval int) {

@@ -26,7 +26,7 @@ import (
 	"unicode"
 
 	jsoniter "github.com/json-iterator/go"
-	"github.com/qiniu/logkit/times"
+	"github.com/longxiucai/logkit/times"
 	log "k8s.io/klog/v2"
 )
 

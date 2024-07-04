@@ -9,9 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/json-iterator/go"
-
-	"github.com/qiniu/logkit/utils/models"
+	jsoniter "github.com/json-iterator/go"
+	"github.com/longxiucai/logkit/utils/models"
 )
 
 var ErrStopped = errors.New("runner stopped")

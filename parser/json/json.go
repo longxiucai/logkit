@@ -9,9 +9,9 @@ import (
 
 	log "k8s.io/klog/v2"
 
-	"github.com/qiniu/logkit/conf"
-	"github.com/qiniu/logkit/parser"
-	. "github.com/qiniu/logkit/utils/models"
+	"github.com/longxiucai/logkit/conf"
+	"github.com/longxiucai/logkit/parser"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 func init() {

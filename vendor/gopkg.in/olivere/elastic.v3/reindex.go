@@ -5,10 +5,9 @@
 package elastic
 
 import (
+	"context"
 	"fmt"
 	"net/url"
-
-	"golang.org/x/net/context"
 )
 
 // ReindexService is a method to copy documents from one index to another.
@@ -280,6 +279,55 @@ func (s *ReindexService) DoC(ctx context.Context) (*ReindexResponse, error) {
 
 	// Return operation response
 	ret := new(ReindexResponse)
+	if err := s.client.decoder.Decode(res.Body, ret); err != nil {
+		return nil, err
+	}
+	return ret, nil
+}
+
+// DoAsync executes the reindexing operation asynchronously by starting a new task.
+// Callers need to use the Task Management API to watch the outcome of the reindexing
+// operation.
+func (s *ReindexService) DoAsync() (*StartTaskResult, error) {
+	return s.DoAsyncC(nil)
+}
+
+// DoAsyncC executes the reindexing operation asynchronously by starting a new task.
+// Callers need to use the Task Management API to watch the outcome of the reindexing
+// operation.
+func (s *ReindexService) DoAsyncC(ctx context.Context) (*StartTaskResult, error) {
+	// Check pre-conditions
+	if err := s.Validate(); err != nil {
+		return nil, err
+	}
+
+	// DoAsync only makes sense with WaitForCompletion set to true
+	if s.waitForCompletion != nil && *s.waitForCompletion {
+		return nil, fmt.Errorf("cannot start a task with WaitForCompletion set to true")
+	}
+	f := false
+	s.waitForCompletion = &f
+
+	// Get URL for request
+	path, params, err := s.buildURL()
+	if err != nil {
+		return nil, err
+	}
+
+	// Setup HTTP request body
+	body, err := s.body()
+	if err != nil {
+		return nil, err
+	}
+
+	// Get HTTP response
+	res, err := s.client.PerformRequestC(ctx, "POST", path, params, body)
+	if err != nil {
+		return nil, err
+	}
+
+	// Return operation response
+	ret := new(StartTaskResult)
 	if err := s.client.decoder.Decode(res.Body, ret); err != nil {
 		return nil, err
 	}

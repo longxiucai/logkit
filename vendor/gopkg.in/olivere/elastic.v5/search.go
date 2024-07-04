@@ -60,7 +60,7 @@ func (s *SearchService) Source(source interface{}) *SearchService {
 
 // FilterPath allows reducing the response, a mechanism known as
 // response filtering and described here:
-// https://www.elastic.co/guide/en/elasticsearch/reference/5.2/common-options.html#common-options-response-filtering.
+// https://www.elastic.co/guide/en/elasticsearch/reference/5.6/common-options.html#common-options-response-filtering.
 func (s *SearchService) FilterPath(filterPath ...string) *SearchService {
 	s.filterPath = append(s.filterPath, filterPath...)
 	return s
@@ -110,10 +110,16 @@ func (s *SearchService) TimeoutInMillis(timeoutInMillis int) *SearchService {
 	return s
 }
 
+// TerminateAfter specifies the maximum number of documents to collect for
+// each shard, upon reaching which the query execution will terminate early.
+func (s *SearchService) TerminateAfter(terminateAfter int) *SearchService {
+	s.searchSource = s.searchSource.TerminateAfter(terminateAfter)
+	return s
+}
+
 // SearchType sets the search operation type. Valid values are:
-// "query_then_fetch", "query_and_fetch", "dfs_query_then_fetch",
-// "dfs_query_and_fetch", "count", "scan".
-// See https://www.elastic.co/guide/en/elasticsearch/reference/5.2/search-request-search-type.html
+// "dfs_query_then_fetch" and "query_then_fetch".
+// See https://www.elastic.co/guide/en/elasticsearch/reference/5.6/search-request-search-type.html
 // for details.
 func (s *SearchService) SearchType(searchType string) *SearchService {
 	s.searchType = searchType
@@ -268,10 +274,17 @@ func (s *SearchService) StoredFields(fields ...string) *SearchService {
 	return s
 }
 
+// TrackScores is applied when sorting and controls if scores will be
+// tracked as well. Defaults to false.
+func (s *SearchService) TrackScores(trackScores bool) *SearchService {
+	s.searchSource = s.searchSource.TrackScores(trackScores)
+	return s
+}
+
 // SearchAfter allows a different form of pagination by using a live cursor,
 // using the results of the previous page to help the retrieval of the next.
 //
-// See https://www.elastic.co/guide/en/elasticsearch/reference/5.2/search-request-search-after.html
+// See https://www.elastic.co/guide/en/elasticsearch/reference/5.6/search-request-search-after.html
 func (s *SearchService) SearchAfter(sortValues ...interface{}) *SearchService {
 	s.searchSource = s.searchSource.SearchAfter(sortValues...)
 	return s
@@ -401,14 +414,14 @@ func (s *SearchService) Do(ctx context.Context) (*SearchResult, error) {
 // SearchResult is the result of a search in Elasticsearch.
 type SearchResult struct {
 	TookInMillis int64          `json:"took"`              // search time in milliseconds
-	ScrollId     string         `json:"_scroll_id"`        // only used with Scroll and Scan operations
+	ScrollId     string         `json:"_scroll_id"`        // only used with Scroll operations
 	Hits         *SearchHits    `json:"hits"`              // the actual search hits
 	Suggest      SearchSuggest  `json:"suggest"`           // results from suggesters
 	Aggregations Aggregations   `json:"aggregations"`      // results from aggregations
 	TimedOut     bool           `json:"timed_out"`         // true if the search timed out
 	Error        *ErrorDetails  `json:"error,omitempty"`   // only used in MultiGet
 	Profile      *SearchProfile `json:"profile,omitempty"` // profiling results, if optional Profile API was active for this search
-	Shards       *shardsInfo    `json:"_shards,omitempty"` // shard information
+	Shards       *ShardsInfo    `json:"_shards,omitempty"` // shard information
 }
 
 // TotalHits is a convenience function to return the number of hits for
@@ -430,6 +443,10 @@ func (r *SearchResult) Each(typ reflect.Type) []interface{} {
 	var slice []interface{}
 	for _, hit := range r.Hits.Hits {
 		v := reflect.New(typ).Elem()
+		if hit.Source == nil {
+			slice = append(slice, v.Interface())
+			continue
+		}
 		if err := json.Unmarshal(*hit.Source, v.Addr().Interface()); err == nil {
 			slice = append(slice, v.Interface())
 		}
@@ -444,9 +461,18 @@ type SearchHits struct {
 	Hits      []*SearchHit `json:"hits"`      // the actual hits returned
 }
 
+// NestedHit is a nested innerhit
+type NestedHit struct {
+	Field  string     `json:"field"`
+	Offset int        `json:"offset,omitempty"`
+	Child  *NestedHit `json:"_nested,omitempty"`
+}
+
 // SearchHit is a single hit.
 type SearchHit struct {
 	Score          *float64                       `json:"_score"`          // computed score
+	Shard          string                         `json:"_shard"`          // shard name
+	Node           string                         `json:"_node"`           // node name
 	Index          string                         `json:"_index"`          // index name
 	Type           string                         `json:"_type"`           // type meta field
 	Id             string                         `json:"_id"`             // external or internal
@@ -461,6 +487,7 @@ type SearchHit struct {
 	Explanation    *SearchExplanation             `json:"_explanation"`    // explains how the score was computed
 	MatchedQueries []string                       `json:"matched_queries"` // matched queries
 	InnerHits      map[string]*SearchHitInnerHits `json:"inner_hits"`      // inner hits with ES >= 1.5.0
+	Nested         *NestedHit                     `json:"_nested"`         // for nested inner hits
 
 	// Shard
 	// HighlightFields
@@ -473,7 +500,7 @@ type SearchHitInnerHits struct {
 }
 
 // SearchExplanation explains how the score for a hit was computed.
-// See https://www.elastic.co/guide/en/elasticsearch/reference/5.2/search-request-explain.html.
+// See https://www.elastic.co/guide/en/elasticsearch/reference/5.6/search-request-explain.html.
 type SearchExplanation struct {
 	Value       float64             `json:"value"`             // e.g. 1.0
 	Description string              `json:"description"`       // e.g. "boost" or "ConstantScore(*:*), product of:"
@@ -483,11 +510,11 @@ type SearchExplanation struct {
 // Suggest
 
 // SearchSuggest is a map of suggestions.
-// See https://www.elastic.co/guide/en/elasticsearch/reference/5.2/search-suggesters.html.
+// See https://www.elastic.co/guide/en/elasticsearch/reference/5.6/search-suggesters.html.
 type SearchSuggest map[string][]SearchSuggestion
 
 // SearchSuggestion is a single search suggestion.
-// See https://www.elastic.co/guide/en/elasticsearch/reference/5.2/search-suggesters.html.
+// See https://www.elastic.co/guide/en/elasticsearch/reference/5.6/search-suggesters.html.
 type SearchSuggestion struct {
 	Text    string                   `json:"text"`
 	Offset  int                      `json:"offset"`
@@ -496,14 +523,18 @@ type SearchSuggestion struct {
 }
 
 // SearchSuggestionOption is an option of a SearchSuggestion.
-// See https://www.elastic.co/guide/en/elasticsearch/reference/5.2/search-suggesters.html.
+// See https://www.elastic.co/guide/en/elasticsearch/reference/5.6/search-suggesters.html.
 type SearchSuggestionOption struct {
-	Text   string           `json:"text"`
-	Index  string           `json:"_index"`
-	Type   string           `json:"_type"`
-	Id     string           `json:"_id"`
-	Score  float64          `json:"_score"`
-	Source *json.RawMessage `json:"_source"`
+	Text            string           `json:"text"`
+	Index           string           `json:"_index"`
+	Type            string           `json:"_type"`
+	Id              string           `json:"_id"`
+	Score           float64          `json:"score"`  // term and phrase suggesters uses "score" as of 5.x
+	ScoreUnderscore float64          `json:"_score"` // completion and context suggesters uses "_score" as of 5.x
+	Highlighted     string           `json:"highlighted"`
+	CollateMatch    bool             `json:"collate_match"`
+	Freq            int              `json:"freq"` // from TermSuggestion.Option in Java API
+	Source          *json.RawMessage `json:"_source"`
 }
 
 // SearchProfile is a list of shard profiling data collected during
@@ -556,6 +587,6 @@ type ProfileResult struct {
 // Highlighting
 
 // SearchHitHighlight is the highlight information of a search hit.
-// See https://www.elastic.co/guide/en/elasticsearch/reference/5.2/search-request-highlighting.html
+// See https://www.elastic.co/guide/en/elasticsearch/reference/5.6/search-request-highlighting.html
 // for a general discussion of highlighting.
 type SearchHitHighlight map[string][]string

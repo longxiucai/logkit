@@ -8,14 +8,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/json-iterator/go"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/qiniu/logkit/conf"
-	"github.com/qiniu/logkit/parser"
-	"github.com/qiniu/logkit/times"
-	"github.com/qiniu/logkit/utils"
-	. "github.com/qiniu/logkit/utils/models"
+	"github.com/longxiucai/logkit/conf"
+	"github.com/longxiucai/logkit/parser"
+	"github.com/longxiucai/logkit/times"
+	"github.com/longxiucai/logkit/utils"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 var (
@@ -308,9 +308,9 @@ func TestRename(t *testing.T) {
 			"reqHeader-Content-Length":  "0",
 			"nullStr":                   "",
 			"code":                      int64(200),
-			"resBody-Content-Length": "55",
-			"resBody-Content-Type":   "application/json",
-			"resBody-X-Reqid":        "pyAAAO0mQ0HoBvkU",
+			"resBody-Content-Length":    "55",
+			"resBody-Content-Type":      "application/json",
+			"resBody-X-Reqid":           "pyAAAO0mQ0HoBvkU",
 			"resBody-X-Log": []interface{}{
 				"REPORT:1",
 			},
@@ -351,9 +351,9 @@ func TestRename(t *testing.T) {
 			"reqHeader_Content_Length":  "0",
 			"nullStr":                   "",
 			"code":                      int64(200),
-			"resBody_Content_Length": "55",
-			"resBody_Content_Type":   "application/json",
-			"resBody_X_Reqid":        "pyAAAO0mQ0HoBvkU",
+			"resBody_Content_Length":    "55",
+			"resBody_Content_Type":      "application/json",
+			"resBody_X_Reqid":           "pyAAAO0mQ0HoBvkU",
 			"resBody_X_Log": []interface{}{
 				"REPORT:1",
 			},

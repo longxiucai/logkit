@@ -13,12 +13,18 @@ type (
 	Response struct {
 		echo        *Echo
 		beforeFuncs []func()
+		afterFuncs  []func()
 		Writer      http.ResponseWriter
 		Status      int
 		Size        int64
 		Committed   bool
 	}
 )
+
+// NewResponse creates a new instance of Response.
+func NewResponse(w http.ResponseWriter, e *Echo) (r *Response) {
+	return &Response{Writer: w, echo: e}
+}
 
 // Header returns the header map for the writer that will be sent by
 // WriteHeader. Changing the header after a call to WriteHeader (or Write) has
@@ -33,6 +39,12 @@ func (r *Response) Header() http.Header {
 // Before registers a function which is called just before the response is written.
 func (r *Response) Before(fn func()) {
 	r.beforeFuncs = append(r.beforeFuncs, fn)
+}
+
+// After registers a function which is called just after the response is written.
+// If the `Content-Length` is unknown, none of the after function is executed.
+func (r *Response) After(fn func()) {
+	r.afterFuncs = append(r.afterFuncs, fn)
 }
 
 // WriteHeader sends an HTTP response header with status code. If WriteHeader is
@@ -59,6 +71,9 @@ func (r *Response) Write(b []byte) (n int, err error) {
 	}
 	n, err = r.Writer.Write(b)
 	r.Size += int64(n)
+	for _, fn := range r.afterFuncs {
+		fn()
+	}
 	return
 }
 
@@ -86,6 +101,8 @@ func (r *Response) CloseNotify() <-chan bool {
 }
 
 func (r *Response) reset(w http.ResponseWriter) {
+	r.beforeFuncs = nil
+	r.afterFuncs = nil
 	r.Writer = w
 	r.Size = 0
 	r.Status = http.StatusOK

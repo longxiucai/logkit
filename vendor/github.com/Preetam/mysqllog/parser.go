@@ -63,8 +63,34 @@ func (p *Parser) Flush() LogEvent {
 	return event
 }
 
-var userHostAttributesRe = regexp.MustCompile(`\b(User@Host: [\w\[\]]+ @ (?:)(\w+)?)|(Id:.+)`)
+var userHostAttributesRe = regexp.MustCompile(`\b(User@Host: \S+\[\w+\]+ @ (?:)(\w+)? \[\S*\])|(Id:.+)`)
 var attributesRe = regexp.MustCompile(`\b([\w_]+:\s+[^\s]+)\b`)
+
+func parseUserHostLine(line string) map[string]string {
+	event := map[string]string{}
+	matches := userHostAttributesRe.FindAllString(line, -1)
+	for _, match := range matches {
+		parts := strings.Split(match, ": ")
+		switch parts[0] {
+		case "User@Host":
+			userHostParts := strings.Split(parts[1], "@")
+			event["User"] = strings.TrimSpace(strings.Split(userHostParts[0], "[")[0])
+			event["Host"] = strings.TrimSpace(strings.Split(userHostParts[1], "[")[0])
+			event["IP"] = strings.TrimRight(strings.TrimSpace(strings.Split(userHostParts[1], "[")[1]), "]")
+			if len(event["IP"]) == 0 {
+				delete(event, "IP")
+			}
+			if len(event["Host"]) == 0 {
+				if len(event["IP"]) > 0 {
+					event["Host"] = event["IP"]
+				} else {
+					delete(event, "Host")
+				}
+			}
+		}
+	}
+	return event
+}
 
 // parseEntry actually parses lines that belong to a log event.
 func parseEntry(lines []string) LogEvent {
@@ -76,15 +102,9 @@ func parseEntry(lines []string) LogEvent {
 			break
 		}
 		if strings.HasPrefix(line, "# User@Host") {
-			matches := userHostAttributesRe.FindAllString(line, -1)
-			for _, match := range matches {
-				parts := strings.Split(match, ": ")
-				switch parts[0] {
-				case "User@Host":
-					userHostParts := strings.Split(parts[1], "@")
-					event["User"] = strings.TrimSpace(strings.Split(userHostParts[0], "[")[0])
-					event["Host"] = strings.TrimSpace(strings.Split(userHostParts[1], "[")[0])
-				}
+			fields := parseUserHostLine(line)
+			for k, v := range fields {
+				event[k] = v
 			}
 			continue
 		}
@@ -130,6 +150,7 @@ func parseEntry(lines []string) LogEvent {
 		if strings.HasPrefix(lines[i], "SET ") {
 			if strings.HasPrefix(lines[i], "SET timestamp=") {
 				unixTimestampString := strings.TrimRight(strings.Split(lines[i], "=")[1], ";\n")
+				event["Timestamp"] = unixTimestampString
 				i, err := strconv.ParseInt(unixTimestampString, 10, 64)
 				if err == nil {
 					event["Timestamp"] = time.Unix(i, 0).UTC()

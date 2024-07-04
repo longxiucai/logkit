@@ -15,7 +15,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	. "github.com/qiniu/logkit/utils/models"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 func tmpDiskQueueName(prefix string) string {
@@ -677,7 +677,9 @@ func BenchmarkDiskWriteBuffered(b *testing.B) {
 }
 
 // this benchmark should be run via:
-//    $ go test -test.bench 'DiskQueueGet' -test.benchtime 0.1
+//
+//	$ go test -test.bench 'DiskQueueGet' -test.benchtime 0.1
+//
 // (so that it does not perform too many iterations)
 func BenchmarkDiskQueueGet(b *testing.B) {
 	b.StopTimer()

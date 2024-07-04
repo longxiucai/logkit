@@ -4,13 +4,9 @@
 package host
 
 // #cgo LDFLAGS: -framework IOKit
-// #include "include/smc.c"
+// #include "smc_darwin.h"
 import "C"
 import "context"
-
-func SensorsTemperatures() ([]TemperatureStat, error) {
-	return SensorsTemperaturesWithContext(context.Background())
-}
 
 func SensorsTemperaturesWithContext(ctx context.Context) ([]TemperatureStat, error) {
 	temperatureKeys := []string{
@@ -44,7 +40,7 @@ func SensorsTemperaturesWithContext(ctx context.Context) ([]TemperatureStat, err
 	for _, key := range temperatureKeys {
 		temperatures = append(temperatures, TemperatureStat{
 			SensorKey:   key,
-			Temperature: float64(C.get_tmp(C.CString(key), C.CELSIUS)),
+			Temperature: float64(C.get_temperature(C.CString(key))),
 		})
 	}
 	return temperatures, nil

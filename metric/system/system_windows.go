@@ -7,8 +7,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/qiniu/logkit/metric"
-	. "github.com/qiniu/logkit/utils/models"
+	"github.com/longxiucai/logkit/metric"
+	. "github.com/longxiucai/logkit/utils/models"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/w32"
 	log "k8s.io/klog/v2"

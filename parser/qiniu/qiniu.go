@@ -5,10 +5,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/qiniu/logkit/conf"
-	"github.com/qiniu/logkit/parser"
-	"github.com/qiniu/logkit/times"
-	. "github.com/qiniu/logkit/utils/models"
+	"github.com/longxiucai/logkit/conf"
+	"github.com/longxiucai/logkit/parser"
+	"github.com/longxiucai/logkit/times"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 /*

@@ -16,10 +16,10 @@ import (
 
 	log "k8s.io/klog/v2"
 
-	"github.com/qiniu/logkit/conf"
-	"github.com/qiniu/logkit/utils"
-	. "github.com/qiniu/logkit/utils/models"
-	utilsos "github.com/qiniu/logkit/utils/os"
+	"github.com/longxiucai/logkit/conf"
+	"github.com/longxiucai/logkit/utils"
+	. "github.com/longxiucai/logkit/utils/models"
+	utilsos "github.com/longxiucai/logkit/utils/os"
 )
 
 const (

@@ -12,10 +12,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/qiniu/logkit/metric"
-	. "github.com/qiniu/logkit/metric/system/utils"
-	"github.com/qiniu/logkit/utils/models"
-	utilsos "github.com/qiniu/logkit/utils/os"
+	"github.com/longxiucai/logkit/metric"
+	. "github.com/longxiucai/logkit/metric/system/utils"
+	"github.com/longxiucai/logkit/utils/models"
+	utilsos "github.com/longxiucai/logkit/utils/os"
 	log "k8s.io/klog/v2"
 
 	"github.com/shirou/gopsutil/process"

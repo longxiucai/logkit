@@ -6,8 +6,8 @@ import (
 
 	log "k8s.io/klog/v2"
 
-	"github.com/qiniu/logkit/conf"
-	. "github.com/qiniu/logkit/utils/models"
+	"github.com/longxiucai/logkit/conf"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 // Reader 代表了一个通用的行读取器

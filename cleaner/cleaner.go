@@ -6,9 +6,9 @@ import (
 
 	log "k8s.io/klog/v2"
 
-	"github.com/qiniu/logkit/conf"
-	"github.com/qiniu/logkit/reader"
-	. "github.com/qiniu/logkit/utils/models"
+	"github.com/longxiucai/logkit/conf"
+	"github.com/longxiucai/logkit/reader"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 type Cleaner struct {
@@ -94,7 +94,7 @@ func (c *Cleaner) Run() {
 	for {
 		select {
 		case <-c.exitChan:
-			log.Warnf("%v receive exit signal, cleaner exiting...", c.name)
+			log.Warningf("%v receive exit signal, cleaner exiting...", c.name)
 			return
 		case <-c.cleanTicker:
 		}

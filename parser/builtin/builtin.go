@@ -2,15 +2,15 @@
 package builtin
 
 import (
-	_ "github.com/qiniu/logkit/parser/csv"
-	_ "github.com/qiniu/logkit/parser/empty"
-	_ "github.com/qiniu/logkit/parser/grok"
-	_ "github.com/qiniu/logkit/parser/json"
-	_ "github.com/qiniu/logkit/parser/kafkarest"
-	_ "github.com/qiniu/logkit/parser/logfmt"
-	_ "github.com/qiniu/logkit/parser/mysql"
-	_ "github.com/qiniu/logkit/parser/nginx"
-	_ "github.com/qiniu/logkit/parser/qiniu"
-	_ "github.com/qiniu/logkit/parser/raw"
-	_ "github.com/qiniu/logkit/parser/syslog"
+	_ "github.com/longxiucai/logkit/parser/csv"
+	_ "github.com/longxiucai/logkit/parser/empty"
+	_ "github.com/longxiucai/logkit/parser/grok"
+	_ "github.com/longxiucai/logkit/parser/json"
+	_ "github.com/longxiucai/logkit/parser/kafkarest"
+	_ "github.com/longxiucai/logkit/parser/logfmt"
+	_ "github.com/longxiucai/logkit/parser/mysql"
+	_ "github.com/longxiucai/logkit/parser/nginx"
+	_ "github.com/longxiucai/logkit/parser/qiniu"
+	_ "github.com/longxiucai/logkit/parser/raw"
+	_ "github.com/longxiucai/logkit/parser/syslog"
 )

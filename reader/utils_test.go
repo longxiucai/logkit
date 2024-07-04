@@ -11,8 +11,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	. "github.com/qiniu/logkit/reader/test"
-	. "github.com/qiniu/logkit/utils/models"
+	. "github.com/longxiucai/logkit/reader/test"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 func TestFindFile(t *testing.T) {

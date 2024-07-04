@@ -6,10 +6,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/qiniu/logkit/conf"
-	"github.com/qiniu/logkit/parser"
-	"github.com/qiniu/logkit/times"
-	. "github.com/qiniu/logkit/utils/models"
+	"github.com/longxiucai/logkit/conf"
+	"github.com/longxiucai/logkit/parser"
+	"github.com/longxiucai/logkit/times"
+	. "github.com/longxiucai/logkit/utils/models"
 )
 
 func Test_QiniuLogRegex(t *testing.T) {
@@ -36,7 +36,7 @@ func Test_QiniuLogRegex(t *testing.T) {
 		},
 		{
 			line: `[GE2owHck-Y4IWJHS]{"error":"No 	 such \t entry","reqid":"","details":null,"code":612}`,
-			exp: false,
+			exp:  false,
 		},
 		{
 			line: "2016/10/20 18:20:30.642666 [ERROR] github.com/qiniu/logkit/queue/disk.go:241: DISKQUEUE(stream_local_save): readOne() error",
@@ -83,7 +83,7 @@ func Test_QiniuLogRegex(t *testing.T) {
 		},
 		{
 			line: `[GE2owHck-Y4IWJHS]{"error":"No 	 such \t entry","reqid":"","details":null,"code":612}`,
-			exp: false,
+			exp:  false,
 		},
 		{
 			line: "QINIU 2016/10/20 18:20:30.642666 [ERROR] github.com/qiniu/logkit/queue/disk.go:241: DISKQUEUE(stream_local_save): readOne() error",

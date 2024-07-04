@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/qiniu/logkit/metric"
-	. "github.com/qiniu/logkit/utils/models"
+	"github.com/longxiucai/logkit/metric"
+	. "github.com/longxiucai/logkit/utils/models"
 	log "k8s.io/klog/v2"
 )
 

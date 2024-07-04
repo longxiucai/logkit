@@ -3,7 +3,7 @@ package ip
 import (
 	"testing"
 
-	. "github.com/qiniu/logkit/utils/models"
+	. "github.com/longxiucai/logkit/utils/models"
 
 	"github.com/stretchr/testify/assert"
 )
