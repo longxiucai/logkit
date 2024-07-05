@@ -24,7 +24,7 @@ BACULA_DEVICEPATH %{UNIXPATH}
 BACULA_CAPACITY %{INT}{1,3}(,%{INT}{3})*
 BACULA_VERSION %{USER}
 BACULA_JOB %{USER}
-
+APISIX %{IPORHOST:client_ip} %{USER:ident} %{USER:auth} \[%{HTTPDATE:timestamp}\] %{NOTSPACE:host} "%{WORD:verb} %{NOTSPACE:request}(?: HTTP/%{NUMBER:http_version})?" %{NUMBER:resp_code} %{NUMBER:resp_bytes} %{NUMBER:resp_time:float} "%{DATA:referrer}" "%{DATA:user_agent}" %{NOTSPACE:upstream_addr} %{NOTSPACE:x_forwarded_for} %{NOTSPACE:request_id} "%{URI:upstream_uri}"
 BACULA_LOG_MAX_CAPACITY User defined maximum volume capacity %{BACULA_CAPACITY} exceeded on device \"%{BACULA_DEVICE:device}\" \(%{BACULA_DEVICEPATH}\)
 BACULA_LOG_END_VOLUME End of medium on Volume \"%{BACULA_VOLUME:volume}\" Bytes=%{BACULA_CAPACITY} Blocks=%{BACULA_CAPACITY} at %{MONTHDAY}-%{MONTH}-%{YEAR} %{HOUR}:%{MINUTE}.
 BACULA_LOG_NEW_VOLUME Created new Volume \"%{BACULA_VOLUME:volume}\" in catalog.

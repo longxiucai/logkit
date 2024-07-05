@@ -461,7 +461,7 @@ func (sf *SeqFile) isNewFile(newFileInfo os.FileInfo, filePath string) bool {
 	}
 	fname := filepath.Base(sf.currFile)
 	if newName != fname {
-		log.Infof("Runner[%v] %s - newName: %d, l.fname: %d", sf.meta.RunnerName, sf.dir, newName, fname)
+		log.Infof("Runner[%v] %s - newName: %v, l.fname: %v", sf.meta.RunnerName, sf.dir, newName, fname)
 		return true
 	}
 	return false
@@ -510,7 +510,7 @@ func (sf *SeqFile) open(fi os.FileInfo) (err error) {
 	sf.f = nil
 	err = fc.Close()
 	if err != nil && err != syscall.EINVAL {
-		log.Warningf("Runner[%v] %s - %s f.Close: %v", sf.meta.RunnerName, sf.dir, sf.currFile)
+		log.Warningf("Runner[%v] - %s f.Close: %v", sf.meta.RunnerName, sf.dir, sf.currFile)
 		return
 	}
 

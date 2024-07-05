@@ -77,7 +77,7 @@ func matchMode(logpath string) (path, mode string, err error) {
 func shouldUseModeDir(logpath string) bool {
 	files, err := ioutil.ReadDir(logpath)
 	if err != nil {
-		log.Warning("read dir %v error %v", logpath, err)
+		log.Warningf("read dir %v error %v", logpath, err)
 		return true
 	}
 	for _, f := range files {

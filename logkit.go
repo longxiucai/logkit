@@ -16,8 +16,6 @@ package main
 
 // 	"github.com/longxiucai/logkit/cli"
 // 	config "github.com/longxiucai/logkit/conf"
-// 	_ "github.com/longxiucai/logkit/metric/all"
-// 	"github.com/longxiucai/logkit/mgr"
 // 	"github.com/longxiucai/logkit/times"
 // 	_ "github.com/longxiucai/logkit/transforms/builtin"
 // 	. "github.com/longxiucai/logkit/utils/models"
@@ -244,7 +242,6 @@ package main
 // 	}
 // 	MaxProcs = conf.MaxProcs
 // 	runtime.GOMAXPROCS(conf.MaxProcs)
-// 	log.SetOutputLevel(conf.DebugLevel)
 
 // 	stopRotate := make(chan struct{}, 0)
 // 	defer close(stopRotate)

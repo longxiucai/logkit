@@ -461,7 +461,7 @@ func (b *BufReader) ReadLine() (ret string, err error) {
 	}
 	if skp, ok := b.rd.(LineSkipper); ok {
 		if skp.IsNewOpen() {
-			log.Infof("%v Skip line %v as first line skipper was configured %v", b.Meta.RunnerName, ret)
+			log.Infof("Skip line %v as first line skipper was configured %v", b.Meta.RunnerName, ret)
 			ret = ""
 			skp.SetSkipped()
 		}
