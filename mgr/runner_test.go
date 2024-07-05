@@ -890,6 +890,7 @@ func TestSplitAndConvertTransforms(t *testing.T) {
 	datas := []Data{{"status": "1,2,3"}, {"status": "4,5,6"}}
 	for k := range transformers {
 		datas, err = transformers[k].Transform(datas)
+		assert.NoError(t, err)
 	}
 	exp := []Data{
 		{

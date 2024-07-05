@@ -226,11 +226,11 @@ func TestWebAPI(t *testing.T) {
 
 	funcMap := map[string]func(*testParam){
 		// "metricAPITest":      metricAPITest,
-		"parserParseTest": parserParseTest,
-		"parserAPITest":   parserAPITest,
-		"readerAPITest":   readerAPITest,
-		// "senderAPITest":      senderAPITest,
-		// "transformerAPITest": transformerAPITest,
+		"parserParseTest":    parserParseTest,
+		"parserAPITest":      parserAPITest,
+		"readerAPITest":      readerAPITest,
+		"senderAPITest":      senderAPITest,
+		"transformerAPITest": transformerAPITest,
 	}
 
 	for k, f := range funcMap {

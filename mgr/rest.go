@@ -97,13 +97,13 @@ func NewRestService(mgr *Manager, router *echo.Echo) *RestService {
 	router.POST(PREFIX+"/transformer/transform", rs.PostTransform())
 	router.POST(PREFIX+"/transformer/check", rs.PostTransformerCheck())
 
-	// //sender API
-	// router.GET(PREFIX+"/sender/usages", rs.GetSenderUsages())
-	// router.GET(PREFIX+"/sender/options", rs.GetSenderKeyOptions())
-	// router.POST(PREFIX+"/sender/send", rs.PostSend())
-	// router.POST(PREFIX+"/sender/check", rs.PostSenderCheck())
-	// router.GET(PREFIX+"/sender/router/usage", rs.GetSenderRouterUsage())
-	// router.GET(PREFIX+"/sender/router/option", rs.GetSenderRouterOption())
+	//sender API
+	router.GET(PREFIX+"/sender/usages", rs.GetSenderUsages())
+	router.GET(PREFIX+"/sender/options", rs.GetSenderKeyOptions())
+	router.POST(PREFIX+"/sender/send", rs.PostSend())
+	router.POST(PREFIX+"/sender/check", rs.PostSenderCheck())
+	router.GET(PREFIX+"/sender/router/usage", rs.GetSenderRouterUsage())
+	router.GET(PREFIX+"/sender/router/option", rs.GetSenderRouterOption())
 
 	// //metric API
 	// router.GET(PREFIX+"/metric/keys", rs.GetMetricKeys())
