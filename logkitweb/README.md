@@ -69,7 +69,7 @@
 克隆项目文件:
 
 ```bash
-git clone https://github.com/qiniu/logkit.git
+git clone https://github.com/longxiucai/logkit.git
 ```
 
 进入目录安装依赖:

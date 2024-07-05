@@ -59,7 +59,7 @@ python main.py -f config.conf
 [code]
 i386=false
 amd64=true
-path=/Users/user/project/gopath/src/github.com/qiniu/logkit
+path=/Users/user/project/gopath/src/github.com/longxiucai/logkit
 
 [pack]
 i386_name=logkit_mac_%s.tar.gz
@@ -84,7 +84,7 @@ dst_path=/Users/user/test
 [code]
 i386=true
 amd64=true
-path=/home/user/project/gopath/src/github.com/qiniu/logkit
+path=/home/user/project/gopath/src/github.com/longxiucai/logkit
 
 [pack]
 i386_name=logkit_linux32_%s.tar.gz

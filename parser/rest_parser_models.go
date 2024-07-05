@@ -75,7 +75,7 @@ var (
 		{TypeGrok, "类似于Logstash Grok Parser一样的解析配置方式，其本质是按照正则表达式匹配解析日志。", ""},
 		{TypeCSV, "按行读取日志，对于每一行，以分隔符分隔，然后通过csv_schema命名分隔出来的字段名称以及字段类型。默认情况下CSV是按\t分隔日志的，可以配置的分隔符包括但不限于, 各类字母、数字、特殊符号(#、!、*、@、%、^、...)等等。", ""},
 		{TypeSyslog, " 是直接根据 RFC3164/RFC5424 规则解析syslog数据的解析器，使用该解析器请确保日志数据严格按照RFC协议规则配置，否则该解析器将无法正确解析。该解析器能够自动识别多行构成的同一条日志。", ""},
-		{TypeLogv1, " 为使用了七牛开源的Golang日志库(https://github.com/qiniu/log) 生成的日志提供的解析方式。", ""},
+		{TypeLogv1, " 为使用了七牛开源的Golang日志库生成的日志提供的解析方式。", ""},
 		{TypeKafkaRest, "将Kafka Rest日志文件的每一行解析为一条结构化的日志.", ""},
 		{TypeEmpty, "通过解析清空数据", ""},
 		{TypeMySQL, "解析mysql的慢请求日志。", ""},
@@ -208,7 +208,6 @@ var ModeKeyOptions = map[string][]Option{
 		OptionLabels,
 		OptionDisableRecordErrData,
 	},
-
 	TypeCSV: {
 		{
 			KeyName:      KeyCSVSplitter,

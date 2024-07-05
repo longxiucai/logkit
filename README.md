@@ -9,7 +9,7 @@
 
 logkit-community（社区版）是[七牛智能日志管理平台](https://www.qiniu.com/products/insight)开发的一个配套的日志收集工具，支持海量的数据源，方便地发送到[七牛智能日志管理平台](https://www.qiniu.com/products/insight)以及其他常见的数据存储服务进行分析，同时也，除了基本的数据发送功能，logkit还有容错、并发、监控、删除等功能。
 
-### logkit-community（社区版） 详细的文档可以参见[WIKI](https://github.com/qiniu/logkit/wiki)页面
+### logkit-community（社区版） 详细的文档可以参见[WIKI](https://github.com/longxiucai/logkit/wiki)页面
 
 ## 优势
 
@@ -26,18 +26,18 @@ logkit-community（社区版）是[七牛智能日志管理平台](https://www.q
 
 ## 支持的数据源
 
-* [File](https://github.com/qiniu/logkit/wiki/File-Reader): 读取文件中的日志数据，包括csv格式的文件，kafka-rest日志文件，nginx日志文件等,并支持以grok的方式解析日志。
-* [Elasticsearch](https://github.com/qiniu/logkit/wiki/ElasticSearch-Reader): 读取ElasticSearch中的数据。
-* [MongoDB](https://github.com/qiniu/logkit/wiki/MongoDB-Reader): 读取MongoDB中的数据。
-* [MySQL](https://github.com/qiniu/logkit/wiki/MySQL-Reader): 读取MySQL中的数据。
-* [MicroSoft SQL Server](https://github.com/qiniu/logkit/wiki/MicroSoft-SQL-Server-Reader): 读取Microsoft SQL Server中的数据。
-* [Postgre SQL](https://github.com/qiniu/logkit/wiki/PostgreSQL-Reader): 读取 PostgreSQL 中的数据。
-* [Kafka](https://github.com/qiniu/logkit/wiki/Kafka-Reader): 读取Kafka中的数据。
-* [Redis](https://github.com/qiniu/logkit/wiki/Redis-Reader): 读取Redis中的数据。
-* [Socket](https://github.com/qiniu/logkit/wiki/Socket-Reader): 读取tcp\udp\unixsocket协议中的数据。
-* [Http](https://github.com/qiniu/logkit/wiki/Http-Reader): 作为 http 服务端，接受 POST 请求发送过来的数据。
-* [Script](https://github.com/qiniu/logkit/wiki/Script-Reader): 支持执行脚本，并获得执行结果中的数据。
-* [Snmp](https://github.com/qiniu/logkit/wiki/Snmp-Reader): 主动抓取 Snmp 服务中的数据。
+* [File](https://github.com/longxiucai/logkit/wiki/File-Reader): 读取文件中的日志数据，包括csv格式的文件，kafka-rest日志文件，nginx日志文件等,并支持以grok的方式解析日志。
+* [Elasticsearch](https://github.com/longxiucai/logkit/wiki/ElasticSearch-Reader): 读取ElasticSearch中的数据。
+* [MongoDB](https://github.com/longxiucai/logkit/wiki/MongoDB-Reader): 读取MongoDB中的数据。
+* [MySQL](https://github.com/longxiucai/logkit/wiki/MySQL-Reader): 读取MySQL中的数据。
+* [MicroSoft SQL Server](https://github.com/longxiucai/logkit/wiki/MicroSoft-SQL-Server-Reader): 读取Microsoft SQL Server中的数据。
+* [Postgre SQL](https://github.com/longxiucai/logkit/wiki/PostgreSQL-Reader): 读取 PostgreSQL 中的数据。
+* [Kafka](https://github.com/longxiucai/logkit/wiki/Kafka-Reader): 读取Kafka中的数据。
+* [Redis](https://github.com/longxiucai/logkit/wiki/Redis-Reader): 读取Redis中的数据。
+* [Socket](https://github.com/longxiucai/logkit/wiki/Socket-Reader): 读取tcp\udp\unixsocket协议中的数据。
+* [Http](https://github.com/longxiucai/logkit/wiki/Http-Reader): 作为 http 服务端，接受 POST 请求发送过来的数据。
+* [Script](https://github.com/longxiucai/logkit/wiki/Script-Reader): 支持执行脚本，并获得执行结果中的数据。
+* [Snmp](https://github.com/longxiucai/logkit/wiki/Snmp-Reader): 主动抓取 Snmp 服务中的数据。
 
 ## 工作方式
 
@@ -49,16 +49,16 @@ logkit-community（社区版）本身支持多种数据源，并且可以同时�
 
 我们非常欢迎您参与到项目中来，您可以通过以下途径参与到项目中来：
 
-* 修复或者[报告bug](https://github.com/qiniu/logkit/issues/new)
-* [提issue](https://github.com/qiniu/logkit/issues/new)改善我们的[wiki文档](https://github.com/qiniu/logkit/wiki)
-* [review 代码](https://github.com/qiniu/logkit/pulls)或[提出功能需求](https://github.com/qiniu/logkit/issues/new)
-* 贡献代码（可以贡献的各类插件模块包括[reader](https://github.com/qiniu/logkit/wiki/Readers)、[parser](https://github.com/qiniu/logkit/wiki/Parsers)、[sender](https://github.com/qiniu/logkit/wiki/Senders)以及[transformer](https://github.com/qiniu/logkit/wiki/Transformers)）
+* 修复或者[报告bug](https://github.com/longxiucai/logkit/issues/new)
+* [提issue](https://github.com/longxiucai/logkit/issues/new)改善我们的[wiki文档](https://github.com/longxiucai/logkit/wiki)
+* [review 代码](https://github.com/longxiucai/logkit/pulls)或[提出功能需求](https://github.com/longxiucai/logkit/issues/new)
+* 贡献代码（可以贡献的各类插件模块包括[reader](https://github.com/longxiucai/logkit/wiki/Readers)、[parser](https://github.com/longxiucai/logkit/wiki/Parsers)、[sender](https://github.com/longxiucai/logkit/wiki/Senders)以及[transformer](https://github.com/longxiucai/logkit/wiki/Transformers)）
 
 ## 下载
 
-**最新稳定版**：请移步至[Download页面](https://github.com/qiniu/logkit/wiki/Download)
+**最新稳定版**：请移步至[Download页面](https://github.com/longxiucai/logkit/wiki/Download)
 
-**历史版本**：请移步至[Releases](https://github.com/qiniu/logkit/releases)
+**历史版本**：请移步至[Releases](https://github.com/longxiucai/logkit/releases)
 
 **体验版**：master 分支每天早上5点会定时构建最新的logkit体验版(仅限Linux 64位以及Docker)，需要使用的用户可以下载(注意，体验版不含前端的构建更新)。
 
@@ -158,7 +158,7 @@ logkit.conf是logkit-community工具基础配置文件，主要用于指定logki
 
 ## 贡献前端代码
 
-参见前端相关README文件：[logkitweb/README.md](https://github.com/qiniu/logkit/blob/master/logkitweb/README.md)
+参见前端相关README文件：[logkitweb/README.md](https://github.com/longxiucai/logkit/blob/master/logkitweb/README.md)
 
 ## 从源码安装与启动
 

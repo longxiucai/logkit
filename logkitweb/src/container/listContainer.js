@@ -190,9 +190,9 @@ class List extends Component {
             <Header className="header" style={{background: '#fff', padding: 0}}> 
               七牛Logkit监控中心{this.state.version}
               <div style={{float: 'right'}}>
-                <a target="_blank" href="https://github.com/qiniu/logkit">
+                <a target="_blank" href="https://github.com/longxiucai/logkit">
                 <Tag color="#108ee9"><Icon type="github" style={{ fontSize: 12, color: 'white' }} />logkit</Tag> </a>
-                <a target="_blank" href="https://github.com/qiniu/logkit/wiki">
+                <a target="_blank" href="https://github.com/longxiucai/logkit/wiki">
                 <Tag color="#108ee9"><Icon type="question-circle-o" style={{ fontSize: 12, color: 'white' }} />帮助文档</Tag> </a>
                 <a target="_blank" href="https://qiniu.github.io/pandora-docs/#/"><Tag
                   color="#108ee9">Pandora产品</Tag>
